@@ -277,6 +277,27 @@
           </div>
         </div>
 
+        <!-- 全年度獎勵專屬欄位：季度選「全年度」時才出現 -->
+        <div id="annualExtraFields" class="hidden">
+          <div class="rounded-2xl p-4 mb-1" style="background:#FDF4E9; border:1.5px dashed var(--line);">
+            <p class="text-xs font-bold mb-3" style="color:var(--caramel-dark);">🏆 全年度獎勵專屬欄位（選填）</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-bold mb-1.5">📝 評核分數</label>
+                <input type="number" id="evalScore" placeholder="例：92" min="0" step="0.1" class="w-full px-4 py-3">
+              </div>
+              <div>
+                <label class="block text-sm font-bold mb-1.5">📚 訓練計劃數</label>
+                <input type="number" id="trainingCount" placeholder="例：5" min="0" step="1" class="w-full px-4 py-3">
+              </div>
+              <div>
+                <label class="block text-sm font-bold mb-1.5">🎯 評核總點數</label>
+                <input type="number" id="evalTotalPoints" placeholder="例：480" min="0" step="1" class="w-full px-4 py-3">
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div>
           <label class="block text-sm font-bold mb-1.5">💌 備註（選填）</label>
           <input type="text" id="note" placeholder="例：來源文號、補充說明" class="w-full px-4 py-3">
@@ -338,7 +359,7 @@
         <table class="data-table w-full text-sm text-left">
           <thead>
             <tr>
-              <th></th><th>年度</th><th>季度</th><th>計畫名稱</th><th class="text-right">金額</th><th>備註</th><th>公文檔案（可多個）</th><th>建立時間</th><th>操作</th>
+              <th></th><th>年度</th><th>季度</th><th>計畫名稱</th><th class="text-right">金額</th><th class="text-right">評核分數</th><th class="text-right">訓練計劃數</th><th class="text-right">評核總點數</th><th>備註</th><th>公文檔案（可多個）</th><th>建立時間</th><th>操作</th>
             </tr>
           </thead>
           <tbody id="listBody"></tbody>
@@ -394,6 +415,11 @@
             <div class="text-xl font-bold" style="color:var(--caramel-dark)" id="sumAvgQuarter">$0</div>
           </div>
         </div>
+      </div>
+
+      <div class="cute-card p-6 sm:p-8 mb-8">
+        <h2 class="text-lg font-bold mb-5">🏆 全年度獎勵分析（評核分數／訓練計劃數／評核總點數）</h2>
+        <div id="annualAwardAnalysis"></div>
       </div>
 
       <div class="cute-card p-6 sm:p-8 mb-8">
@@ -565,6 +591,7 @@ function bindStaticEvents() {
   $("programSelect").addEventListener("change", () => {
     if ($("programSelect").value) $("programCustom").value = "";
   });
+  $("quarter").addEventListener("change", toggleAnnualExtraFields);
   $("downloadPdfBtn").addEventListener("click", downloadAnalysisPdf);
   $("compareProgramSelect").addEventListener("change", renderProgramComparison);
   $("tabEntryBtn").addEventListener("click", () => switchTab("entry"));
@@ -721,7 +748,7 @@ function getAnalysisRecords() {
 /* ============================================================================
    輸入驗證（防呆：年度範圍、必填、金額需為正數）
    ============================================================================ */
-function validateRecordInput({ year, quarter, program, amount }) {
+function validateRecordInput({ year, quarter, program, amount, evalScore, trainingCount, evalTotalPoints }) {
   const errors = [];
   const invalidFields = new Set();
 
@@ -743,6 +770,22 @@ function validateRecordInput({ year, quarter, program, amount }) {
     errors.push("金額請輸入大於 0 的數字");
     invalidFields.add("amount");
   }
+
+  // 全年度獎勵專屬欄位：選填，但若有填寫必須是不小於 0 的數字
+  [
+    { id: "evalScore", label: "評核分數", val: evalScore },
+    { id: "trainingCount", label: "訓練計劃數", val: trainingCount },
+    { id: "evalTotalPoints", label: "評核總點數", val: evalTotalPoints }
+  ].forEach(f => {
+    if (f.val !== "" && f.val !== undefined && f.val !== null) {
+      const n = Number(f.val);
+      if (isNaN(n) || n < 0) {
+        errors.push(`${f.label}請輸入不小於 0 的數字`);
+        invalidFields.add(f.id);
+      }
+    }
+  });
+
   return { errors, invalidFields };
 }
 
@@ -752,7 +795,12 @@ function markFieldError(id, isError) {
 }
 
 function clearFieldErrors() {
-  ["year", "quarter", "amount"].forEach(id => markFieldError(id, false));
+  ["year", "quarter", "amount", "evalScore", "trainingCount", "evalTotalPoints"].forEach(id => markFieldError(id, false));
+}
+
+function toggleAnnualExtraFields() {
+  const isAnnual = $("quarter").value === "5";
+  $("annualExtraFields").classList.toggle("hidden", !isAnnual);
 }
 
 /* ============================================================================
@@ -843,6 +891,10 @@ function renderPivot() {
 /* ============================================================================
    渲染：登錄明細（依年度分組收合＋分頁顯示，避免清單越拉越長）
    ============================================================================ */
+function fmtOptionalNumber(v) {
+  return (v === undefined || v === null || v === "") ? '<span style="color:#C9B6A3;">—</span>' : escapeHtml(String(v));
+}
+
 function buildRecordRow(r) {
   const filesHtml = (r.files && r.files.length)
     ? r.files.map(f => `
@@ -861,6 +913,9 @@ function buildRecordRow(r) {
       <td>${quarterLabel(r.quarter)}</td>
       <td>${escapeHtml(r.program)}</td>
       <td class="text-right">${fmtMoney(Number(r.amount))}</td>
+      <td class="text-right">${fmtOptionalNumber(r.evalScore)}</td>
+      <td class="text-right">${fmtOptionalNumber(r.trainingCount)}</td>
+      <td class="text-right">${fmtOptionalNumber(r.evalTotalPoints)}</td>
       <td style="color:var(--brown-soft);">${escapeHtml(r.note || "")}</td>
       <td>${filesHtml}</td>
       <td class="text-xs" style="color:#9C8468;">${escapeHtml(r.createdAt || "")}</td>
@@ -875,7 +930,7 @@ function renderListTable() {
   const records = getFilteredRecords().slice().sort((a, b) => (b.year - a.year) || (b.quarter - a.quarter) || (b.createdAt || "").localeCompare(a.createdAt || ""));
   const body = $("listBody");
   if (records.length === 0) {
-    body.innerHTML = '<tr><td colspan="9" class="text-center py-6" style="color:#B79E86;">尚無登錄紀錄 🍃</td></tr>';
+    body.innerHTML = '<tr><td colspan="12" class="text-center py-6" style="color:#B79E86;">尚無登錄紀錄 🍃</td></tr>';
     return;
   }
 
@@ -899,7 +954,7 @@ function renderListTable() {
     const isOpen = state.expandedYears.has(y);
     const header = `
       <tr data-action="toggle-year" data-year="${y}" style="cursor:pointer; background:#FDF4E9;">
-        <td colspan="9" class="font-bold" style="color:var(--caramel-dark);">
+        <td colspan="12" class="font-bold" style="color:var(--caramel-dark);">
           <i class="fa-solid ${isOpen ? "fa-chevron-down" : "fa-chevron-right"} mr-2"></i>📅 ${y} 年度　<span style="color:var(--brown-soft); font-weight:600;">（${rows.length} 筆・小計 ${fmtMoney(yearTotal)}）</span>
         </td>
       </tr>`;
@@ -912,7 +967,7 @@ function renderListTable() {
     const remaining = rows.length - visibleCount;
     const moreRow = remaining > 0 ? `
       <tr>
-        <td colspan="9" class="text-center py-2">
+        <td colspan="12" class="text-center py-2">
           <button type="button" data-action="show-more" data-year="${y}" class="btn-ghost px-4 py-1.5 text-xs">⬇️ 顯示更多（還有 ${remaining} 筆）</button>
         </td>
       </tr>` : "";
@@ -1041,6 +1096,8 @@ function renderAnalysis() {
   $("sumPrograms").textContent = programs.length;
   $("sumAvgQuarter").textContent = fmtMoney(avgQuarter);
 
+  renderAnnualAwardAnalysis(records);
+
   // 各計畫佔比
   const byProgram = {};
   records.forEach(r => { byProgram[r.program] = (byProgram[r.program] || 0) + Number(r.amount); });
@@ -1096,6 +1153,64 @@ function renderAnalysis() {
   }).join("");
 }
 
+/* 全年度獎勵（季度=5）專屬分析：評核分數／訓練計劃數／評核總點數 */
+function renderAnnualAwardAnalysis(analysisScopeRecords) {
+  const container = $("annualAwardAnalysis");
+  const records = analysisScopeRecords.filter(r => String(r.quarter) === "5");
+
+  if (!records.length) {
+    container.innerHTML = '<p class="text-sm" style="color:#B79E86;">目前篩選範圍內沒有全年度獎勵資料 🍃</p>';
+    return;
+  }
+
+  const hasValue = (v) => v !== undefined && v !== null && v !== "";
+  const totalAmount = records.reduce((s, r) => s + Number(r.amount), 0);
+  const scoreRecords = records.filter(r => hasValue(r.evalScore));
+  const avgScore = scoreRecords.length ? (scoreRecords.reduce((s, r) => s + Number(r.evalScore), 0) / scoreRecords.length) : null;
+  const totalTraining = records.reduce((s, r) => s + (hasValue(r.trainingCount) ? Number(r.trainingCount) : 0), 0);
+  const totalPoints = records.reduce((s, r) => s + (hasValue(r.evalTotalPoints) ? Number(r.evalTotalPoints) : 0), 0);
+
+  const summaryHtml = `
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+      <div class="summary-card text-center">
+        <div class="text-xs font-bold mb-1" style="color:var(--brown-soft)">🏆 獎勵金額合計</div>
+        <div class="text-xl font-bold" style="color:var(--caramel-dark)">${fmtMoney(totalAmount)}</div>
+      </div>
+      <div class="summary-card text-center">
+        <div class="text-xs font-bold mb-1" style="color:var(--brown-soft)">📝 平均評核分數</div>
+        <div class="text-xl font-bold" style="color:var(--caramel-dark)">${avgScore === null ? "—" : avgScore.toFixed(1)}</div>
+      </div>
+      <div class="summary-card text-center">
+        <div class="text-xs font-bold mb-1" style="color:var(--brown-soft)">📚 訓練計劃數合計</div>
+        <div class="text-xl font-bold" style="color:var(--caramel-dark)">${totalTraining}</div>
+      </div>
+      <div class="summary-card text-center">
+        <div class="text-xs font-bold mb-1" style="color:var(--brown-soft)">🎯 評核總點數合計</div>
+        <div class="text-xl font-bold" style="color:var(--caramel-dark)">${totalPoints}</div>
+      </div>
+    </div>`;
+
+  const rowsHtml = records.slice().sort((a, b) => b.year - a.year).map(r => `
+    <tr>
+      <td>${r.year} 年度</td>
+      <td>${escapeHtml(r.program)}</td>
+      <td class="text-right font-bold" style="color:var(--caramel-dark);">${fmtMoney(Number(r.amount))}</td>
+      <td class="text-right">${fmtOptionalNumber(r.evalScore)}</td>
+      <td class="text-right">${fmtOptionalNumber(r.trainingCount)}</td>
+      <td class="text-right">${fmtOptionalNumber(r.evalTotalPoints)}</td>
+    </tr>`).join("");
+
+  container.innerHTML = summaryHtml + `
+    <div class="overflow-x-auto rounded-2xl" style="border:1.5px solid var(--line);">
+      <table class="data-table w-full text-sm text-left">
+        <thead>
+          <tr><th>年度</th><th>計畫名稱</th><th class="text-right">金額</th><th class="text-right">評核分數</th><th class="text-right">訓練計劃數</th><th class="text-right">評核總點數</th></tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+}
+
 /* 依「上一期」「去年同一期」比較單一計畫的每期金額變化 */
 function buildProgramComparison(program) {
   const byPeriod = {};
@@ -1112,7 +1227,9 @@ function buildProgramComparison(program) {
   }).sort((a, b) => (a.year - b.year) || (Number(a.quarter) - Number(b.quarter)));
 
   return periods.map((p, idx) => {
-    const prev = idx > 0 ? periods[idx - 1] : null;
+    // 「上期」只在同一年度內比較（例如今年第1季不會拿去年第4季來比），跨年度一律視為無上期資料
+    const prevCandidate = idx > 0 ? periods[idx - 1] : null;
+    const prev = (prevCandidate && prevCandidate.year === p.year) ? prevCandidate : null;
     const yoyKey = (p.year - 1) + "|" + p.quarter;
     return {
       ...p,
@@ -1214,6 +1331,10 @@ function startEdit(id) {
   state.filesToRemove = new Set();
   renderExistingFilesEditor();
   $("amount").value = r.amount;
+  $("evalScore").value = (r.evalScore === undefined || r.evalScore === "") ? "" : r.evalScore;
+  $("trainingCount").value = (r.trainingCount === undefined || r.trainingCount === "") ? "" : r.trainingCount;
+  $("evalTotalPoints").value = (r.evalTotalPoints === undefined || r.evalTotalPoints === "") ? "" : r.evalTotalPoints;
+  toggleAnnualExtraFields();
   $("formTitle").textContent = "編輯補助紀錄";
   $("submitBtnText").textContent = "儲 存 修 改";
   $("cancelEditBtn").classList.remove("hidden");
@@ -1234,6 +1355,7 @@ function resetForm() {
   $("submitBtnText").textContent = "新 增 紀 錄";
   $("cancelEditBtn").classList.add("hidden");
   $("formMsg").textContent = "";
+  toggleAnnualExtraFields();
   clearFieldErrors();
 }
 
@@ -1264,11 +1386,21 @@ async function onSubmit(e) {
   const yearVal = $("year").value;
   const quarterVal = $("quarter").value;
   const amountVal = $("amount").value;
+  const isAnnual = quarterVal === "5";
+  const evalScoreVal = isAnnual ? $("evalScore").value : "";
+  const trainingCountVal = isAnnual ? $("trainingCount").value : "";
+  const evalTotalPointsVal = isAnnual ? $("evalTotalPoints").value : "";
 
-  const { errors, invalidFields } = validateRecordInput({ year: yearVal, quarter: quarterVal, program, amount: amountVal });
+  const { errors, invalidFields } = validateRecordInput({
+    year: yearVal, quarter: quarterVal, program, amount: amountVal,
+    evalScore: evalScoreVal, trainingCount: trainingCountVal, evalTotalPoints: evalTotalPointsVal
+  });
   markFieldError("year", invalidFields.has("year"));
   markFieldError("quarter", invalidFields.has("quarter"));
   markFieldError("amount", invalidFields.has("amount"));
+  markFieldError("evalScore", invalidFields.has("evalScore"));
+  markFieldError("trainingCount", invalidFields.has("trainingCount"));
+  markFieldError("evalTotalPoints", invalidFields.has("evalTotalPoints"));
 
   if (errors.length) {
     msg.textContent = errors[0];
@@ -1283,7 +1415,10 @@ async function onSubmit(e) {
     quarter: quarterVal,
     program: program,
     amount: amountVal,
-    note: $("note").value
+    note: $("note").value,
+    evalScore: evalScoreVal,
+    trainingCount: trainingCountVal,
+    evalTotalPoints: evalTotalPointsVal
   };
 
   const fileInput = $("fileInput");
