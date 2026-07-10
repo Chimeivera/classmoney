@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>補助費用登錄與統計｜佳里奇美醫院 教學研究組</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --cream: #FBF3E7;
+    --cream-card: #FFFDF9;
+    --caramel: #E3A876;
+    --caramel-dark: #B97D4E;
+    --pink: #F4C9C0;
+    --pink-dark: #D9776A;
+    --sage: #C9D9BE;
+    --sage-dark: #6E8F5C;
+    --brown-text: #5C4632;
+    --brown-soft: #856847;
+    --line: #F0E0CC;
+  }
+  body {
+    background: var(--cream);
+    background-image:
+      radial-gradient(circle at 8% 12%, rgba(228,178,140,0.18) 0%, transparent 40%),
+      radial-gradient(circle at 92% 88%, rgba(201,217,190,0.22) 0%, transparent 40%);
+    color: var(--brown-text);
+    font-family: 'Quicksand', 'Noto Sans TC', sans-serif;
+  }
+  .cute-card {
+    background: var(--cream-card);
+    border: 1.5px solid var(--line);
+    border-radius: 28px;
+    box-shadow: 0 8px 24px rgba(180, 140, 100, 0.10), 0 2px 6px rgba(180,140,100,0.06);
+  }
+  h1, h2, h3, label, button { font-family: 'Quicksand', 'Noto Sans TC', sans-serif; }
+  h1, h2 { color: var(--caramel-dark); }
+  input, select, textarea {
+    background: #FFFCF7;
+    border: 1.5px solid var(--line);
+    border-radius: 16px;
+    color: var(--brown-text);
+    color-scheme: light;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--caramel);
+    box-shadow: 0 0 0 4px rgba(227,168,118,0.18);
+  }
+  input::placeholder { color: #B79E86; }
+
+  /* 檔案選擇按鈕：咖啡色文字，避免白字看不清楚 */
+  input[type="file"] { color: var(--brown-text); font-weight: 600; }
+  input[type="file"]::file-selector-button,
+  input[type="file"]::-webkit-file-upload-button {
+    background: #FFFFFF;
+    border: 1.5px solid var(--caramel);
+    color: var(--caramel-dark);
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 9px 18px;
+    margin-right: 12px;
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+  input[type="file"]::file-selector-button:hover,
+  input[type="file"]::-webkit-file-upload-button:hover { background: #FFF3E4; }
+
+  .btn-cute {
+    background: linear-gradient(135deg, var(--caramel) 0%, var(--pink-dark) 100%);
+    color: #fff;
+    border-radius: 999px;
+    box-shadow: 0 6px 16px rgba(227,168,118,0.35);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-cute:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(227,168,118,0.45); }
+  .btn-cute:active { transform: translateY(0); }
+  .btn-ghost {
+    border: 1.5px solid var(--caramel);
+    color: var(--caramel-dark);
+    border-radius: 999px;
+    background: #fff;
+    font-weight: 700;
+  }
+  .btn-ghost:hover { background: #FBF3E7; }
+
+  .tab-btn {
+    border-radius: 999px;
+    padding: 10px 22px;
+    font-weight: 700;
+    color: var(--brown-soft);
+    border: 1.5px solid var(--line);
+    background: #fff;
+    transition: all .15s ease;
+  }
+  .tab-btn.active {
+    background: linear-gradient(135deg, var(--caramel) 0%, var(--pink-dark) 100%);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(227,168,118,0.35);
+  }
+
+  table.data-table th {
+    position: sticky; top: 0;
+    background: #FDF4E9;
+    color: var(--brown-soft);
+    font-weight: 700;
+    border-bottom: 2px solid var(--line);
+  }
+  table.data-table td, table.data-table th { padding: 0.65rem 0.85rem; }
+  table.data-table tr { border-bottom: 1px solid var(--line); }
+  table.data-table tr:hover td { background: #FFF8EE; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #FBEFE0; border: 1px solid var(--line); border-radius: 999px;
+    padding: 3px 10px; font-size: 0.78rem; color: var(--caramel-dark); font-weight: 700;
+  }
+  .chip button { color: var(--pink-dark); }
+  ::-webkit-scrollbar { height: 8px; width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+
+  .bar-track { background: #F5E9D8; border-radius: 999px; height: 14px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--caramel) 0%, var(--pink-dark) 100%); }
+
+  .summary-card {
+    background: #FFFDF9; border: 1.5px solid var(--line); border-radius: 22px; padding: 18px 20px;
+  }
+  .print-only { display: none; }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff !important; }
+    .cute-card { box-shadow: none !important; border: 1px solid #e5d9c5 !important; }
+    .print-only { display: block !important; }
+    a { color: var(--brown-text) !important; text-decoration: none !important; }
+  }
+</style>
+</head>
+<body class="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
+<div class="max-w-5xl mx-auto">
+
+  <!-- 標題 -->
+  <div class="text-center mb-8">
+    <div class="text-4xl mb-2">🍯📋✨</div>
+    <h1 class="text-3xl sm:text-4xl font-bold tracking-tight mb-2">補助費用登錄與統計</h1>
+    <p class="text-sm" style="color:var(--brown-soft)">佳里奇美醫院 教學研究組　🐾</p>
+  </div>
+
+  <!-- 設定提示 -->
+  <div id="setupHint" class="hidden cute-card p-6 mb-8 text-sm no-print" style="border-color:#F0B8B0; color:#C1685A;">
+    <i class="fa-solid fa-triangle-exclamation mr-2"></i>請先在 index.html 檔案裡把 <code class="bg-black/5 px-1 rounded">GAS_URL</code> 換成你部署好的 Apps Script /exec 網址。
+  </div>
+
+  <!-- 分頁切換 + 篩選年度（共用） -->
+  <div class="flex items-center justify-between flex-wrap gap-3 mb-6 no-print">
+    <div class="flex gap-2">
+      <button type="button" id="tabEntryBtn" class="tab-btn active" onclick="switchTab('entry')">📝 登錄與明細</button>
+      <button type="button" id="tabAnalysisBtn" class="tab-btn" onclick="switchTab('analysis')">📊 總覽分析</button>
+    </div>
+    <div class="flex items-center gap-2">
+      <label class="text-sm font-bold" style="color:var(--brown-soft)">篩選年度：</label>
+      <select id="yearFilter" class="px-3 py-2 text-sm">
+        <option value="">全部年度</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ============ 分頁一：登錄與明細 ============ -->
+  <div id="tabEntry">
+
+    <!-- 新增／編輯 表單卡 -->
+    <div class="cute-card p-6 sm:p-8 mb-8">
+      <h2 class="text-lg font-bold mb-5">📝 <span id="formTitle">新增補助紀錄</span></h2>
+      <form id="recordForm" class="space-y-5">
+        <input type="hidden" id="recordId" value="">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-bold mb-1.5">📅 年度（民國） <span class="text-rose-400">*</span></label>
+            <input type="number" id="year" placeholder="例：115" required class="w-full px-4 py-3">
+          </div>
+          <div>
+            <label class="block text-sm font-bold mb-1.5">🍃 季度 <span class="text-rose-400">*</span></label>
+            <select id="quarter" required class="w-full px-4 py-3">
+              <option value="">請選擇</option>
+              <option value="1">第 1 季</option>
+              <option value="2">第 2 季</option>
+              <option value="3">第 3 季</option>
+              <option value="4">第 4 季</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold mb-1.5">💰 金額（元） <span class="text-rose-400">*</span></label>
+            <input type="number" id="amount" placeholder="例：129338" required class="w-full px-4 py-3">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold mb-1.5">🏷️ 補助計畫名稱 <span class="text-rose-400">*</span></label>
+          <div class="flex gap-2 flex-col sm:flex-row">
+            <select id="programSelect" class="flex-1 px-4 py-3">
+              <option value="">請選擇既有計畫，或於右側輸入新計畫</option>
+            </select>
+            <input type="text" id="programCustom" placeholder="✨ 新增計畫名稱（若清單沒有）" class="flex-1 px-4 py-3">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold mb-1.5">💌 備註（選填）</label>
+          <input type="text" id="note" placeholder="例：來源文號、補充說明" class="w-full px-4 py-3">
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold mb-1.5">📎 公文檔案（選填，可上傳 PDF／圖片／Word 等）</label>
+          <input type="file" id="fileInput" class="w-full px-4 py-3">
+          <p id="existingFileHint" class="hidden mt-1.5 text-xs" style="color:var(--brown-soft)"></p>
+        </div>
+
+        <div class="flex gap-3 flex-wrap">
+          <button type="submit" id="submitBtn" class="flex-1 btn-cute font-bold py-3.5 px-6 min-w-[180px]">
+            <i class="fa-solid fa-heart mr-1"></i> <span id="submitBtnText">新 增 紀 錄</span>
+          </button>
+          <button type="button" id="cancelEditBtn" class="hidden px-6 py-3.5 btn-ghost">取消編輯</button>
+        </div>
+        <p id="formMsg" class="text-sm mt-1 font-bold"></p>
+      </form>
+    </div>
+
+    <!-- 統計總覽卡 -->
+    <div class="cute-card p-6 sm:p-8 mb-8">
+      <h2 class="text-lg font-bold mb-5">📊 季度統計總覽</h2>
+      <div class="overflow-x-auto rounded-2xl" style="border:1.5px solid var(--line);">
+        <table class="data-table w-full text-sm text-left">
+          <thead id="pivotHead"><tr><th>載入中...🍩</th></tr></thead>
+          <tbody id="pivotBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 自訂加總卡 -->
+    <div class="cute-card p-6 sm:p-8 mb-8">
+      <h2 class="text-lg font-bold mb-2">🧮 自訂加總小幫手</h2>
+      <p class="text-xs mb-4" style="color:var(--brown-soft)">在下方「登錄明細」表格勾選任意筆資料（例如 A 計畫的第 1 季 + B 計畫的第 1 季），這裡會自動幫你加總 🍡</p>
+      <div id="selectedChips" class="flex flex-wrap gap-2 mb-4">
+        <span class="text-xs" style="color:#B79E86;">目前尚未勾選任何項目</span>
+      </div>
+      <div class="flex items-center justify-between flex-wrap gap-3 rounded-2xl px-5 py-4" style="background:#FDF4E9; border:1.5px dashed var(--line);">
+        <div class="text-sm font-bold" style="color:var(--brown-soft)">已選 <span id="selCount">0</span> 筆</div>
+        <div class="text-2xl font-bold" style="color:var(--caramel-dark)">🍯 合計：<span id="selTotal">$0</span></div>
+        <button type="button" id="clearSelBtn" class="btn-ghost px-4 py-2 text-sm">清空勾選</button>
+      </div>
+    </div>
+
+    <!-- 明細列表卡 -->
+    <div class="cute-card p-6 sm:p-8">
+      <h2 class="text-lg font-bold mb-5">📋 登錄明細</h2>
+      <div class="overflow-x-auto rounded-2xl" style="border:1.5px solid var(--line);">
+        <table class="data-table w-full text-sm text-left">
+          <thead>
+            <tr>
+              <th></th><th>年度</th><th>季度</th><th>計畫名稱</th><th class="text-right">金額</th><th>備註</th><th>公文檔案</th><th>建立時間</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 分頁二：總覽分析 ============ -->
+  <div id="tabAnalysis" class="hidden">
+    <div id="analysisPrintArea">
+
+      <!-- 只在列印/PDF 時顯示的報表抬頭 -->
+      <div class="print-only mb-6">
+        <h2 class="text-2xl font-bold" style="color:var(--caramel-dark)">補助費用分析報表</h2>
+        <p class="text-sm" style="color:var(--brown-soft)">佳里奇美醫院 教學研究組｜產出時間：<span id="printTimestamp"></span>｜範圍：<span id="printScope"></span></p>
+      </div>
+
+      <div class="cute-card p-6 sm:p-8 mb-8">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-5 no-print">
+          <h2 class="text-lg font-bold">📊 補助費用分析摘要</h2>
+          <button type="button" id="downloadPdfBtn" class="btn-cute font-bold py-2.5 px-5 text-sm">
+            <i class="fa-solid fa-file-pdf mr-1"></i> 下載分析 PDF
+          </button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="summary-card text-center">
+            <div class="text-xs font-bold mb-1" style="color:var(--brown-soft)">🍯 累計總補助金額</div>
+            <div class="text-xl font-bold" style="color:var(--caramel-dark)" id="sumTotal">$0</div>
+          </div>
+          <div class="summary-card text-center">
+            <div class="text-xs font-bold mb-1" style="color:var(--brown-soft)">📄 登錄筆數</div>
+            <div class="text-xl font-bold" style="color:var(--caramel-dark)" id="sumCount">0</div>
+          </div>
+          <div class="summary-card text-center">
+            <div class="text-xs font-bold mb-1" style="color:var(--brown-soft)">🏷️ 補助計畫數</div>
+            <div class="text-xl font-bold" style="color:var(--caramel-dark)" id="sumPrograms">0</div>
+          </div>
+          <div class="summary-card text-center">
+            <div class="text-xs font-bold mb-1" style="color:var(--brown-soft)">📅 平均每季總額</div>
+            <div class="text-xl font-bold" style="color:var(--caramel-dark)" id="sumAvgQuarter">$0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cute-card p-6 sm:p-8 mb-8">
+        <h2 class="text-lg font-bold mb-5">🏷️ 各計畫佔比</h2>
+        <div id="programBars" class="space-y-4"></div>
+      </div>
+
+      <div class="cute-card p-6 sm:p-8 mb-8">
+        <h2 class="text-lg font-bold mb-5">📈 各年度總額比較</h2>
+        <div id="yearBars" class="space-y-4"></div>
+      </div>
+
+      <div class="cute-card p-6 sm:p-8">
+        <h2 class="text-lg font-bold mb-5">🍃 各季度加總比較（跨年度合計）</h2>
+        <div id="quarterBars" class="space-y-4"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="text-center text-xs mt-8 no-print" style="color:#B79E86;">made with 🤍 by 教學研究組</p>
+</div>
+
+<script>
+/* ============ 設定：請換成你自己部署的 Apps Script /exec 網址 ============ */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbykh0r_2E43j4XXYQnu1rvC4NCd-Lypp08UBLgADMe1O2zHESy-c7uICB8EEiEkmXSz9Q/exec";
+
+let allRecords = [];
+let editingId = null;
+let selectedIds = new Set();
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (GAS_URL.indexOf("TODO_") === 0) {
+    document.getElementById("setupHint").classList.remove("hidden");
+  }
+  loadList();
+  document.getElementById("recordForm").addEventListener("submit", onSubmit);
+  document.getElementById("cancelEditBtn").addEventListener("click", resetForm);
+  document.getElementById("yearFilter").addEventListener("change", renderAll);
+  document.getElementById("clearSelBtn").addEventListener("click", () => { selectedIds.clear(); renderListTable(); renderSelectionSummary(); });
+  document.getElementById("programSelect").addEventListener("change", () => {
+    if (document.getElementById("programSelect").value) {
+      document.getElementById("programCustom").value = "";
+    }
+  });
+  document.getElementById("downloadPdfBtn").addEventListener("click", downloadAnalysisPdf);
+});
+
+function switchTab(tab) {
+  const entry = document.getElementById("tabEntry");
+  const analysis = document.getElementById("tabAnalysis");
+  const entryBtn = document.getElementById("tabEntryBtn");
+  const analysisBtn = document.getElementById("tabAnalysisBtn");
+  if (tab === "entry") {
+    entry.classList.remove("hidden"); analysis.classList.add("hidden");
+    entryBtn.classList.add("active"); analysisBtn.classList.remove("active");
+  } else {
+    entry.classList.add("hidden"); analysis.classList.remove("hidden");
+    analysisBtn.classList.add("active"); entryBtn.classList.remove("active");
+    renderAnalysis();
+  }
+}
+
+function downloadAnalysisPdf() {
+  // 先切到分析分頁確保內容有渲染，再叫出瀏覽器列印，於列印視窗選「另存為 PDF」即可下載
+  switchTab("analysis");
+  const yf = document.getElementById("yearFilter").value;
+  document.getElementById("printTimestamp").textContent = new Date().toLocaleString("zh-TW", { hour12: false });
+  document.getElementById("printScope").textContent = yf ? (yf + " 年度") : "全部年度";
+  setTimeout(() => window.print(), 150);
+}
+
+function jsonpRequest(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = "cb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+    window[cbName] = (data) => { resolve(data); cleanup(); };
+    const script = document.createElement("script");
+    const qs = new URLSearchParams({ ...params, callback: cbName }).toString();
+    script.src = GAS_URL + "?" + qs;
+    script.onerror = () => { reject(new Error("JSONP 載入失敗")); cleanup(); };
+    document.body.appendChild(script);
+    function cleanup() {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    setTimeout(() => reject(new Error("逾時")), 15000);
+  });
+}
+
+function loadList() {
+  jsonpRequest({ action: "list" }).then((res) => {
+    allRecords = (res && res.records) ? res.records : [];
+    renderAll();
+  }).catch((err) => {
+    console.error(err);
+    document.getElementById("pivotHead").innerHTML = '<tr><th style="color:#C1685A;">資料載入失敗，請確認 GAS_URL 是否已設定並已部署</th></tr>';
+  });
+}
+
+function renderAll() {
+  populateYearFilter();
+  populateProgramSelect();
+  renderPivot();
+  renderListTable();
+  renderSelectionSummary();
+  if (!document.getElementById("tabAnalysis").classList.contains("hidden")) {
+    renderAnalysis();
+  }
+}
+
+function populateYearFilter() {
+  const sel = document.getElementById("yearFilter");
+  const current = sel.value;
+  const years = [...new Set(allRecords.map(r => String(r.year)))].sort((a, b) => b - a);
+  sel.innerHTML = '<option value="">全部年度</option>' + years.map(y => `<option value="${y}">${y} 年度</option>`).join("");
+  sel.value = current && years.includes(current) ? current : "";
+}
+
+function populateProgramSelect() {
+  const sel = document.getElementById("programSelect");
+  const current = sel.value;
+  const programs = [...new Set(allRecords.map(r => r.program))].sort();
+  sel.innerHTML = '<option value="">請選擇既有計畫，或於右側輸入新計畫</option>' +
+    programs.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
+  sel.value = current && programs.includes(current) ? current : "";
+}
+
+function getFilteredRecords() {
+  const yf = document.getElementById("yearFilter").value;
+  return yf ? allRecords.filter(r => String(r.year) === yf) : allRecords;
+}
+
+function renderPivot() {
+  const records = getFilteredRecords();
+  const programs = [...new Set(records.map(r => r.program))].sort();
+  const head = document.getElementById("pivotHead");
+  const body = document.getElementById("pivotBody");
+
+  if (records.length === 0) {
+    head.innerHTML = '<tr><th style="font-weight:400; color:#B79E86;">目前尚無資料 🍃</th></tr>';
+    body.innerHTML = "";
+    return;
+  }
+
+  head.innerHTML = `<tr>
+      <th>年度</th><th>季度</th>
+      ${programs.map(p => `<th class="text-right">${escapeHtml(p)}</th>`).join("")}
+      <th class="text-right" style="color:var(--caramel-dark);">🍯 總補助費用</th>
+    </tr>`;
+
+  const groups = {};
+  records.forEach(r => {
+    const key = r.year + "|" + r.quarter;
+    if (!groups[key]) groups[key] = { year: r.year, quarter: r.quarter, byProgram: {} };
+    groups[key].byProgram[r.program] = (groups[key].byProgram[r.program] || 0) + Number(r.amount);
+  });
+  const rows = Object.values(groups).sort((a, b) => (b.year - a.year) || (a.quarter - b.quarter));
+
+  const programTotals = {};
+  let grandTotal = 0;
+
+  body.innerHTML = rows.map(g => {
+    let rowTotal = 0;
+    const cells = programs.map(p => {
+      const v = g.byProgram[p] || 0;
+      rowTotal += v;
+      programTotals[p] = (programTotals[p] || 0) + v;
+      return `<td class="text-right" style="color:${v ? "var(--brown-text)" : "#C9B6A3"}">${v ? fmtMoney(v) : "—"}</td>`;
+    }).join("");
+    grandTotal += rowTotal;
+    return `<tr>
+        <td>${g.year}</td><td>第 ${g.quarter} 季 🍃</td>${cells}
+        <td class="text-right font-bold" style="color:var(--caramel-dark);">${fmtMoney(rowTotal)}</td>
+      </tr>`;
+  }).join("") + `
+    <tr class="font-bold" style="background:#FDF4E9; border-top:2px solid var(--line);">
+      <td colspan="2">🍡 合　計</td>
+      ${programs.map(p => `<td class="text-right">${fmtMoney(programTotals[p] || 0)}</td>`).join("")}
+      <td class="text-right" style="color:var(--caramel-dark);">${fmtMoney(grandTotal)}</td>
+    </tr>`;
+}
+
+function renderListTable() {
+  const records = getFilteredRecords().slice().sort((a, b) => (b.year - a.year) || (b.quarter - a.quarter) || (b.createdAt || "").localeCompare(a.createdAt || ""));
+  const body = document.getElementById("listBody");
+  if (records.length === 0) {
+    body.innerHTML = '<tr><td colspan="9" class="text-center py-6" style="color:#B79E86;">尚無登錄紀錄 🍃</td></tr>';
+    return;
+  }
+  body.innerHTML = records.map(r => `
+    <tr>
+      <td><input type="checkbox" class="rowCheck" data-id="${r.id}" ${selectedIds.has(r.id) ? "checked" : ""} style="width:18px;height:18px;accent-color:var(--caramel-dark);"></td>
+      <td>${r.year}</td>
+      <td>第 ${r.quarter} 季</td>
+      <td>${escapeHtml(r.program)}</td>
+      <td class="text-right">${fmtMoney(Number(r.amount))}</td>
+      <td style="color:var(--brown-soft);">${escapeHtml(r.note || "")}</td>
+      <td>${r.fileUrl ? `<a href="${r.fileUrl}" target="_blank" style="color:var(--caramel-dark); font-weight:700;" class="hover:underline"><i class="fa-solid fa-paperclip mr-1"></i>${escapeHtml(r.fileName || "檔案")}</a>` : '<span style="color:#C9B6A3;">—</span>'}</td>
+      <td class="text-xs" style="color:#9C8468;">${escapeHtml(r.createdAt || "")}</td>
+      <td class="whitespace-nowrap">
+        <button onclick="startEdit('${r.id}')" style="color:var(--caramel-dark);" class="hover:opacity-70 mr-3">✏️</button>
+        <button onclick="deleteRecord('${r.id}')" style="color:var(--pink-dark);" class="hover:opacity-70">🗑️</button>
+      </td>
+    </tr>
+  `).join("");
+
+  document.querySelectorAll(".rowCheck").forEach(cb => {
+    cb.addEventListener("change", (e) => {
+      const id = e.target.getAttribute("data-id");
+      if (e.target.checked) selectedIds.add(id); else selectedIds.delete(id);
+      renderSelectionSummary();
+    });
+  });
+}
+
+function renderSelectionSummary() {
+  const chipsEl = document.getElementById("selectedChips");
+  const selected = allRecords.filter(r => selectedIds.has(r.id));
+  if (selected.length === 0) {
+    chipsEl.innerHTML = '<span class="text-xs" style="color:#B79E86;">目前尚未勾選任何項目</span>';
+  } else {
+    chipsEl.innerHTML = selected.map(r => `
+      <span class="chip">🍬 ${r.year}年 第${r.quarter}季・${escapeHtml(r.program)}：${fmtMoney(Number(r.amount))}
+        <button onclick="toggleSelect('${r.id}')" title="移除"><i class="fa-solid fa-circle-xmark"></i></button>
+      </span>
+    `).join("");
+  }
+  const total = selected.reduce((sum, r) => sum + Number(r.amount), 0);
+  document.getElementById("selCount").textContent = selected.length;
+  document.getElementById("selTotal").textContent = fmtMoney(total);
+}
+
+function toggleSelect(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  renderListTable();
+  renderSelectionSummary();
+}
+
+/* ============ 總覽分析 ============ */
+function renderAnalysis() {
+  const records = getFilteredRecords();
+
+  const total = records.reduce((s, r) => s + Number(r.amount), 0);
+  const programs = [...new Set(records.map(r => r.program))];
+  const quarterKeys = new Set(records.map(r => r.year + "|" + r.quarter));
+  const avgQuarter = quarterKeys.size ? total / quarterKeys.size : 0;
+
+  document.getElementById("sumTotal").textContent = fmtMoney(total);
+  document.getElementById("sumCount").textContent = records.length;
+  document.getElementById("sumPrograms").textContent = programs.length;
+  document.getElementById("sumAvgQuarter").textContent = fmtMoney(avgQuarter);
+
+  // 各計畫佔比
+  const byProgram = {};
+  records.forEach(r => { byProgram[r.program] = (byProgram[r.program] || 0) + Number(r.amount); });
+  const programEntries = Object.entries(byProgram).sort((a, b) => b[1] - a[1]);
+  const maxProgram = programEntries.length ? programEntries[0][1] : 0;
+  document.getElementById("programBars").innerHTML = programEntries.length ? programEntries.map(([name, amt]) => {
+    const pct = total ? (amt / total * 100) : 0;
+    const width = maxProgram ? (amt / maxProgram * 100) : 0;
+    return `
+      <div>
+        <div class="flex justify-between text-sm mb-1">
+          <span class="font-bold" style="color:var(--brown-text);">🏷️ ${escapeHtml(name)}</span>
+          <span style="color:var(--caramel-dark); font-weight:700;">${fmtMoney(amt)}（${pct.toFixed(1)}%）</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${width}%;"></div></div>
+      </div>`;
+  }).join("") : '<p class="text-sm" style="color:#B79E86;">目前尚無資料 🍃</p>';
+
+  // 各年度總額比較
+  const byYear = {};
+  records.forEach(r => { byYear[r.year] = (byYear[r.year] || 0) + Number(r.amount); });
+  const yearEntries = Object.entries(byYear).sort((a, b) => a[0] - b[0]);
+  const maxYear = yearEntries.length ? Math.max(...yearEntries.map(e => e[1])) : 0;
+  document.getElementById("yearBars").innerHTML = yearEntries.length ? yearEntries.map(([yr, amt]) => {
+    const width = maxYear ? (amt / maxYear * 100) : 0;
+    return `
+      <div>
+        <div class="flex justify-between text-sm mb-1">
+          <span class="font-bold" style="color:var(--brown-text);">📅 ${yr} 年度</span>
+          <span style="color:var(--caramel-dark); font-weight:700;">${fmtMoney(amt)}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${width}%;"></div></div>
+      </div>`;
+  }).join("") : '<p class="text-sm" style="color:#B79E86;">目前尚無資料 🍃</p>';
+
+  // 各季度加總比較（跨年度）
+  const byQuarter = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  records.forEach(r => { byQuarter[r.quarter] = (byQuarter[r.quarter] || 0) + Number(r.amount); });
+  const maxQuarter = Math.max(...Object.values(byQuarter));
+  document.getElementById("quarterBars").innerHTML = [1, 2, 3, 4].map(q => {
+    const amt = byQuarter[q] || 0;
+    const width = maxQuarter ? (amt / maxQuarter * 100) : 0;
+    return `
+      <div>
+        <div class="flex justify-between text-sm mb-1">
+          <span class="font-bold" style="color:var(--brown-text);">🍃 第 ${q} 季</span>
+          <span style="color:var(--caramel-dark); font-weight:700;">${fmtMoney(amt)}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${width}%;"></div></div>
+      </div>`;
+  }).join("");
+}
+
+function startEdit(id) {
+  const r = allRecords.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById("recordId").value = id;
+  document.getElementById("year").value = r.year;
+  document.getElementById("quarter").value = r.quarter;
+  document.getElementById("programSelect").value = r.program;
+  document.getElementById("programCustom").value = "";
+  document.getElementById("note").value = r.note || "";
+  document.getElementById("fileInput").value = "";
+  const hint = document.getElementById("existingFileHint");
+  if (r.fileUrl) {
+    hint.classList.remove("hidden");
+    hint.innerHTML = `📎 目前已附檔案：<a href="${r.fileUrl}" target="_blank" style="color:var(--caramel-dark); font-weight:700;" class="hover:underline">${escapeHtml(r.fileName)}</a>（重新上傳將會取代）`;
+  } else {
+    hint.classList.add("hidden");
+  }
+  document.getElementById("amount").value = r.amount;
+  document.getElementById("formTitle").textContent = "編輯補助紀錄";
+  document.getElementById("submitBtnText").textContent = "儲 存 修 改";
+  document.getElementById("cancelEditBtn").classList.remove("hidden");
+  switchTab("entry");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function resetForm() {
+  editingId = null;
+  document.getElementById("recordForm").reset();
+  document.getElementById("recordId").value = "";
+  document.getElementById("existingFileHint").classList.add("hidden");
+  document.getElementById("formTitle").textContent = "新增補助紀錄";
+  document.getElementById("submitBtnText").textContent = "新 增 紀 錄";
+  document.getElementById("cancelEditBtn").classList.add("hidden");
+  document.getElementById("formMsg").textContent = "";
+}
+
+function deleteRecord(id) {
+  if (!confirm("確定要刪除這筆紀錄嗎？此動作無法復原。")) return;
+  postToGas({ action: "delete", id }).then(() => {
+    allRecords = allRecords.filter(r => r.id !== id);
+    selectedIds.delete(id);
+    renderAll();
+  }).catch(err => alert("刪除失敗：" + err.message));
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function onSubmit(e) {
+  e.preventDefault();
+  const msg = document.getElementById("formMsg");
+  const btn = document.getElementById("submitBtn");
+  const program = document.getElementById("programCustom").value.trim() || document.getElementById("programSelect").value;
+
+  if (!program) {
+    msg.textContent = "請選擇或輸入補助計畫名稱。";
+    msg.style.color = "#C1685A";
+    return;
+  }
+
+  const payload = {
+    action: editingId ? "update" : "add",
+    id: editingId || ("id_" + Date.now() + "_" + Math.floor(Math.random() * 100000)),
+    year: document.getElementById("year").value,
+    quarter: document.getElementById("quarter").value,
+    program: program,
+    amount: document.getElementById("amount").value,
+    note: document.getElementById("note").value
+  };
+
+  const fileInput = document.getElementById("fileInput");
+  if (fileInput.files && fileInput.files[0]) {
+    const file = fileInput.files[0];
+    if (file.size > 15 * 1024 * 1024) {
+      msg.textContent = "檔案過大（上限約 15MB），請壓縮後再上傳。";
+      msg.style.color = "#C1685A";
+      return;
+    }
+    payload.fileData = await fileToBase64(file);
+    payload.fileName = file.name;
+    payload.fileMime = file.type || "application/octet-stream";
+  }
+
+  btn.disabled = true;
+  msg.textContent = "處理中... 🍯";
+  msg.style.color = "var(--brown-soft)";
+
+  postToGas(payload).then(() => {
+    msg.textContent = editingId ? "已更新！🎀" : "新增成功！🎉";
+    msg.style.color = "#6E8F5C";
+    resetForm();
+    loadList();
+  }).catch(err => {
+    msg.textContent = "失敗：" + err.message;
+    msg.style.color = "#C1685A";
+  }).finally(() => { btn.disabled = false; });
+}
+
+// POST 寫入；因 GAS 302 轉址常讀不到回應，失敗時改用 JSONP 依 id 查詢確認是否真的寫入成功
+function postToGas(payload) {
+  return fetch(GAS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload)
+  }).then(res => res.json()).then(data => {
+    if (data.result === "success") return data;
+    throw new Error(data.message || "寫入失敗");
+  }).catch(() => {
+    if (payload.action === "delete") {
+      return { result: "success" };
+    }
+    return jsonpRequest({ action: "find", id: payload.id }).then(r => {
+      if (r.result === "found") return { result: "success" };
+      throw new Error("寫入狀態不明，請重新整理頁面確認是否已新增/更新成功");
+    });
+  });
+}
+
+function fmtMoney(n) {
+  return "$" + Math.round(n).toLocaleString("zh-TW");
+}
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+</script>
+</body>
+</html>
