@@ -147,6 +147,22 @@
   }
   .print-only { display: none; }
 
+  .preview-overlay {
+    position: fixed; inset: 0; background: rgba(92, 70, 50, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  .preview-box {
+    background: #fff; border-radius: 24px; width: 100%; max-width: 900px; height: 85vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 20px 50px rgba(92,70,50,0.35);
+  }
+  .preview-box-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1.5px solid var(--line); background: #FDF4E9;
+  }
+  .preview-box iframe { flex: 1; width: 100%; border: 0; }
+
   @media print {
     .no-print { display: none !important; }
     body { background: #fff !important; }
@@ -357,6 +373,20 @@
   <p class="text-center text-xs mt-8 no-print" style="color:#B79E86;">made with 🤍 by 教學研究組</p>
 </div>
 
+<!-- 公文線上預覽彈窗 -->
+<div id="previewOverlay" class="preview-overlay hidden no-print" onclick="if(event.target===this) closePreview()">
+  <div class="preview-box">
+    <div class="preview-box-header">
+      <div class="font-bold" style="color:var(--caramel-dark);"><i class="fa-solid fa-eye mr-1"></i> <span id="previewFileName">檔案預覽</span></div>
+      <div class="flex items-center gap-3">
+        <a id="previewOpenNewTab" href="#" target="_blank" class="text-sm font-bold" style="color:var(--caramel-dark);"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>開新分頁</a>
+        <button type="button" onclick="closePreview()" class="text-xl" style="color:var(--pink-dark);">✕</button>
+      </div>
+    </div>
+    <iframe id="previewFrame" src="" title="檔案預覽"></iframe>
+  </div>
+</div>
+
 <script>
 /* ============ 設定：請換成你自己部署的 Apps Script /exec 網址 ============ */
 const GAS_URL = "https://script.google.com/macros/s/AKfycbykh0r_2E43j4XXYQnu1rvC4NCd-Lypp08UBLgADMe1O2zHESy-c7uICB8EEiEkmXSz9Q/exec";
@@ -411,6 +441,21 @@ function downloadAnalysisPdf() {
   document.getElementById("printTimestamp").textContent = new Date().toLocaleString("zh-TW", { hour12: false });
   document.getElementById("printScope").textContent = yearText + "｜" + programText;
   setTimeout(() => window.print(), 150);
+}
+
+function openPreview(url, fileName) {
+  const match = url.match(/\/d\/([^/]+)/) || url.match(/[?&]id=([^&]+)/);
+  const fileId = match ? match[1] : null;
+  const previewSrc = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url;
+  document.getElementById("previewFrame").src = previewSrc;
+  document.getElementById("previewOpenNewTab").href = url;
+  document.getElementById("previewFileName").textContent = fileName || "檔案預覽";
+  document.getElementById("previewOverlay").classList.remove("hidden");
+}
+
+function closePreview() {
+  document.getElementById("previewOverlay").classList.add("hidden");
+  document.getElementById("previewFrame").src = "";
 }
 
 function jsonpRequest(params) {
@@ -583,7 +628,13 @@ function renderListTable() {
       <td>${escapeHtml(r.program)}</td>
       <td class="text-right">${fmtMoney(Number(r.amount))}</td>
       <td style="color:var(--brown-soft);">${escapeHtml(r.note || "")}</td>
-      <td>${(r.files && r.files.length) ? r.files.map(f => `<a href="${f.url}" target="_blank" style="color:var(--caramel-dark); font-weight:700; display:block;" class="hover:underline"><i class="fa-solid fa-paperclip mr-1"></i>${escapeHtml(f.name || "檔案")}</a>`).join("") : '<span style="color:#C9B6A3;">—</span>'}</td>
+      <td>${(r.files && r.files.length) ? r.files.map(f => `
+        <div class="mb-1">
+          <button type="button" onclick="openPreview('${f.url.replace(/'/g, "\\'")}', '${(f.name || "檔案").replace(/'/g, "\\'")}')" style="color:var(--caramel-dark); font-weight:700;" class="hover:underline">
+            <i class="fa-solid fa-eye mr-1"></i>${escapeHtml(f.name || "檔案")}
+          </button>
+          <a href="${f.url}" target="_blank" class="ml-1" style="color:#B79E86;" title="開新分頁 / 下載"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        </div>`).join("") : '<span style="color:#C9B6A3;">—</span>'}</td>
       <td class="text-xs" style="color:#9C8468;">${escapeHtml(r.createdAt || "")}</td>
       <td class="whitespace-nowrap">
         <button onclick="startEdit('${r.id}')" style="color:var(--caramel-dark);" class="hover:opacity-70 mr-3">✏️</button>
@@ -707,7 +758,7 @@ function renderExistingFilesEditor() {
   box.innerHTML = currentEditFiles.map(f => {
     const removed = filesToRemove.has(f.url);
     return `<span class="chip" style="${removed ? "opacity:.45; text-decoration:line-through;" : ""}">
-        📎 <a href="${f.url}" target="_blank" style="color:var(--caramel-dark);">${escapeHtml(f.name)}</a>
+        📎 <button type="button" onclick="openPreview('${f.url.replace(/'/g, "\\'")}', '${f.name.replace(/'/g, "\\'")}')" style="color:var(--caramel-dark);" class="hover:underline">${escapeHtml(f.name)}</button>
         <button type="button" onclick="toggleRemoveExistingFile('${f.url.replace(/'/g, "\\'")}')" title="${removed ? "取消移除" : "移除此檔案"}">
           <i class="fa-solid ${removed ? "fa-rotate-left" : "fa-circle-xmark"}"></i>
         </button>
