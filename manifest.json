@@ -1,0 +1,17 @@
+{
+  "name": "補助費用登錄與統計",
+  "short_name": "補助登錄",
+  "description": "佳里奇美醫院 教學研究組｜補助費用登錄與統計系統",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FBF3E7",
+  "theme_color": "#E3A876",
+  "lang": "zh-TW",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

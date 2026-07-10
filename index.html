@@ -2,8 +2,19 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>補助費用登錄與統計｜佳里奇美醫院 教學研究組</title>
+
+<!-- PWA：可加入手機主畫面變成 App 圖示 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#E3A876">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="補助登錄">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -152,6 +163,12 @@
     box-shadow: 0 0 0 3px rgba(217,119,106,0.18) !important;
   }
 
+  /* 手機加入主畫面（standalone 模式）時，避開瀏海/圓角螢幕的上下安全區域 */
+  body {
+    padding-top: max(2.5rem, env(safe-area-inset-top)) !important;
+    padding-bottom: max(2.5rem, env(safe-area-inset-bottom)) !important;
+  }
+
   .preview-overlay {
     position: fixed; inset: 0; background: rgba(92, 70, 50, 0.55);
     display: flex; align-items: center; justify-content: center;
@@ -190,6 +207,20 @@
   <!-- 設定提示 -->
   <div id="setupHint" class="hidden cute-card p-6 mb-8 text-sm no-print" style="border-color:#F0B8B0; color:#C1685A;">
     <i class="fa-solid fa-triangle-exclamation mr-2"></i>請先在 index.html 檔案裡把 <code class="bg-black/5 px-1 rounded">GAS_URL</code> 換成你部署好的 Apps Script /exec 網址。
+  </div>
+
+  <!-- 加入手機主畫面提示 -->
+  <div id="installBanner" class="hidden cute-card p-4 mb-6 no-print" style="border-color:var(--caramel);">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">📲</span>
+        <span id="installBannerText" class="text-sm font-bold" style="color:var(--brown-text);"></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" id="installBannerActionBtn" class="hidden btn-cute px-4 py-2 text-xs font-bold">加入主畫面</button>
+        <button type="button" id="installBannerCloseBtn" class="text-lg px-2" style="color:var(--brown-soft);">✕</button>
+      </div>
+    </div>
   </div>
 
   <!-- 分頁切換 + 篩選年度（共用） -->
@@ -371,6 +402,18 @@
       </div>
 
       <div class="cute-card p-6 sm:p-8 mb-8">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <h2 class="text-lg font-bold">🔍 單一計畫期別比較</h2>
+          <div class="flex items-center gap-2 no-print">
+            <label class="text-sm font-bold" style="color:var(--brown-soft)">選擇計畫：</label>
+            <select id="compareProgramSelect" class="px-3 py-2 text-sm"></select>
+          </div>
+        </div>
+        <p class="text-xs mb-4" style="color:var(--brown-soft)">看這個計畫每一期跟「上一期」「去年同一期」比起來是增加還是減少 🍃</p>
+        <div id="compareTable"></div>
+      </div>
+
+      <div class="cute-card p-6 sm:p-8 mb-8">
         <h2 class="text-lg font-bold mb-5">📈 各年度總額比較</h2>
         <div id="yearBars" class="space-y-4"></div>
       </div>
@@ -440,7 +483,74 @@ function init() {
   if (GAS_URL.indexOf("TODO_") === 0) $("setupHint").classList.remove("hidden");
   bindStaticEvents();
   bindDelegatedEvents();
+  initInstallPrompt();
+  registerServiceWorker();
   loadList();
+}
+
+/* ============================================================================
+   PWA：加入手機主畫面 提示 + Service Worker 註冊
+   ============================================================================ */
+let deferredInstallPrompt = null;
+
+function isIosDevice() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+
+function isStandaloneMode() {
+  return (window.navigator.standalone === true) || window.matchMedia("(display-mode: standalone)").matches;
+}
+
+function initInstallPrompt() {
+  if (isStandaloneMode() || localStorage.getItem("installBannerDismissed")) return;
+
+  $("installBannerCloseBtn").addEventListener("click", dismissInstallBanner);
+  $("installBannerActionBtn").addEventListener("click", triggerInstallPrompt);
+
+  // Android / Chrome：瀏覽器主動觸發，可以顯示「加入主畫面」按鈕直接安裝
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    showInstallBanner("android");
+  });
+
+  // iOS Safari 不支援 beforeinstallprompt，改顯示手動安裝教學
+  if (isIosDevice()) {
+    showInstallBanner("ios");
+  }
+}
+
+function showInstallBanner(platform) {
+  const text = $("installBannerText");
+  const actionBtn = $("installBannerActionBtn");
+  if (platform === "ios") {
+    text.innerHTML = '在 Safari 下方點「分享」<i class="fa-solid fa-arrow-up-from-bracket mx-1"></i>，選「加入主畫面」，就能像 App 一樣打開 🍯';
+    actionBtn.classList.add("hidden");
+  } else {
+    text.textContent = "把這個工具加入手機主畫面，像 App 一樣點一下就打開 🍯";
+    actionBtn.classList.remove("hidden");
+  }
+  $("installBanner").classList.remove("hidden");
+}
+
+function dismissInstallBanner() {
+  $("installBanner").classList.add("hidden");
+  localStorage.setItem("installBannerDismissed", "1");
+}
+
+async function triggerInstallPrompt() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  dismissInstallBanner();
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch((err) => console.warn("Service worker 註冊失敗：", err));
+  });
 }
 
 function bindStaticEvents() {
@@ -456,6 +566,7 @@ function bindStaticEvents() {
     if ($("programSelect").value) $("programCustom").value = "";
   });
   $("downloadPdfBtn").addEventListener("click", downloadAnalysisPdf);
+  $("compareProgramSelect").addEventListener("change", renderProgramComparison);
   $("tabEntryBtn").addEventListener("click", () => switchTab("entry"));
   $("tabAnalysisBtn").addEventListener("click", () => switchTab("analysis"));
   $("selectAllProgramsBtn").addEventListener("click", selectAllAnalysisPrograms);
@@ -872,6 +983,18 @@ function syncAnalysisPrograms() {
   state.selectedPrograms.forEach(p => { if (!programs.includes(p)) state.selectedPrograms.delete(p); });
   state.knownPrograms = new Set(programs);
   renderAnalysisProgramChips(programs);
+  populateCompareProgramSelect(programs);
+}
+
+function populateCompareProgramSelect(programs) {
+  const sel = $("compareProgramSelect");
+  const current = sel.value;
+  if (!programs.length) {
+    sel.innerHTML = '<option value="">尚無計畫</option>';
+    return;
+  }
+  sel.innerHTML = programs.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
+  sel.value = (current && programs.includes(current)) ? current : programs[0];
 }
 
 function renderAnalysisProgramChips(programs) {
@@ -936,6 +1059,8 @@ function renderAnalysis() {
       </div>`;
   }).join("") : '<p class="text-sm" style="color:#B79E86;">目前尚無資料 🍃</p>';
 
+  renderProgramComparison();
+
   // 各年度總額比較
   const byYear = {};
   records.forEach(r => { byYear[r.year] = (byYear[r.year] || 0) + Number(r.amount); });
@@ -969,6 +1094,82 @@ function renderAnalysis() {
         <div class="bar-track"><div class="bar-fill" style="width:${width}%;"></div></div>
       </div>`;
   }).join("");
+}
+
+/* 依「上一期」「去年同一期」比較單一計畫的每期金額變化 */
+function buildProgramComparison(program) {
+  const byPeriod = {};
+  state.allRecords
+    .filter(r => r.program === program)
+    .forEach(r => {
+      const key = r.year + "|" + r.quarter;
+      byPeriod[key] = (byPeriod[key] || 0) + Number(r.amount);
+    });
+
+  const periods = Object.keys(byPeriod).map(key => {
+    const [year, quarter] = key.split("|");
+    return { year: Number(year), quarter, amount: byPeriod[key] };
+  }).sort((a, b) => (a.year - b.year) || (Number(a.quarter) - Number(b.quarter)));
+
+  return periods.map((p, idx) => {
+    const prev = idx > 0 ? periods[idx - 1] : null;
+    const yoyKey = (p.year - 1) + "|" + p.quarter;
+    return {
+      ...p,
+      prevAmount: prev ? prev.amount : null,
+      prevLabel: prev ? (prev.year + " 年 " + quarterLabel(prev.quarter)) : null,
+      yoyAmount: Object.prototype.hasOwnProperty.call(byPeriod, yoyKey) ? byPeriod[yoyKey] : null
+    };
+  });
+}
+
+/* 把「金額 vs 對照金額」的差異，轉成帶顏色／箭頭的 HTML */
+function formatDelta(current, base) {
+  if (base === null || base === undefined) {
+    return '<span style="color:#C9B6A3;">— 無對照資料</span>';
+  }
+  const diff = current - base;
+  const pct = base !== 0 ? (diff / base * 100) : null;
+  const isUp = diff > 0, isDown = diff < 0;
+  const color = isUp ? "var(--sage-dark)" : (isDown ? "var(--pink-dark)" : "var(--brown-soft)");
+  const arrow = isUp ? "▲" : (isDown ? "▼" : "→");
+  const pctText = (pct === null) ? "" : `（${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%）`;
+  return `<span style="color:${color}; font-weight:700;">${arrow} ${fmtMoney(Math.abs(diff))}${pctText}</span>`;
+}
+
+function renderProgramComparison() {
+  const program = $("compareProgramSelect").value;
+  const container = $("compareTable");
+  if (!program) {
+    container.innerHTML = '<p class="text-sm" style="color:#B79E86;">目前尚無計畫資料 🍃</p>';
+    return;
+  }
+
+  const periods = buildProgramComparison(program);
+  if (!periods.length) {
+    container.innerHTML = '<p class="text-sm" style="color:#B79E86;">這個計畫目前還沒有登錄資料 🍃</p>';
+    return;
+  }
+
+  const rowsHtml = periods.slice().reverse().map(p => `
+    <tr>
+      <td>${p.year} 年度</td>
+      <td>${quarterLabel(p.quarter)}</td>
+      <td class="text-right font-bold" style="color:var(--caramel-dark);">${fmtMoney(p.amount)}</td>
+      <td class="text-right">${formatDelta(p.amount, p.prevAmount)}</td>
+      <td class="text-right">${formatDelta(p.amount, p.yoyAmount)}</td>
+    </tr>
+  `).join("");
+
+  container.innerHTML = `
+    <div class="overflow-x-auto rounded-2xl" style="border:1.5px solid var(--line);">
+      <table class="data-table w-full text-sm text-left">
+        <thead>
+          <tr><th>年度</th><th>期別</th><th class="text-right">金額</th><th class="text-right">較上期</th><th class="text-right">較去年同期</th></tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
 }
 
 /* ============================================================================
