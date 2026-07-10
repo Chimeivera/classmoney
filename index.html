@@ -147,6 +147,11 @@
   }
   .print-only { display: none; }
 
+  .field-error {
+    border-color: var(--pink-dark) !important;
+    box-shadow: 0 0 0 3px rgba(217,119,106,0.18) !important;
+  }
+
   .preview-overlay {
     position: fixed; inset: 0; background: rgba(92, 70, 50, 0.55);
     display: flex; align-items: center; justify-content: center;
@@ -190,8 +195,8 @@
   <!-- 分頁切換 + 篩選年度（共用） -->
   <div class="flex items-center justify-between flex-wrap gap-3 mb-6 no-print">
     <div class="flex gap-2">
-      <button type="button" id="tabEntryBtn" class="tab-btn active" onclick="switchTab('entry')">📝 登錄與明細</button>
-      <button type="button" id="tabAnalysisBtn" class="tab-btn" onclick="switchTab('analysis')">📊 總覽分析</button>
+      <button type="button" id="tabEntryBtn" class="tab-btn active">📝 登錄與明細</button>
+      <button type="button" id="tabAnalysisBtn" class="tab-btn">📊 總覽分析</button>
     </div>
     <div class="flex items-center gap-2">
       <label class="text-sm font-bold" style="color:var(--brown-soft)">篩選年度：</label>
@@ -212,21 +217,22 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label class="block text-sm font-bold mb-1.5">📅 年度（民國） <span class="text-rose-400">*</span></label>
-            <input type="number" id="year" placeholder="例：115" required class="w-full px-4 py-3">
+            <input type="number" id="year" placeholder="例：115" min="90" max="150" step="1" required class="w-full px-4 py-3">
           </div>
           <div>
-            <label class="block text-sm font-bold mb-1.5">🍃 季度 <span class="text-rose-400">*</span></label>
+            <label class="block text-sm font-bold mb-1.5">🍃 季度／期別 <span class="text-rose-400">*</span></label>
             <select id="quarter" required class="w-full px-4 py-3">
               <option value="">請選擇</option>
               <option value="1">第 1 季</option>
               <option value="2">第 2 季</option>
               <option value="3">第 3 季</option>
               <option value="4">第 4 季</option>
+              <option value="5">🏆 全年度（執行成效優良醫院獎勵）</option>
             </select>
           </div>
           <div>
             <label class="block text-sm font-bold mb-1.5">💰 金額（元） <span class="text-rose-400">*</span></label>
-            <input type="number" id="amount" placeholder="例：129338" required class="w-full px-4 py-3">
+            <input type="number" id="amount" placeholder="例：129338" min="1" step="1" required class="w-full px-4 py-3">
           </div>
         </div>
 
@@ -289,7 +295,14 @@
 
     <!-- 明細列表卡 -->
     <div class="cute-card p-6 sm:p-8">
-      <h2 class="text-lg font-bold mb-5">📋 登錄明細</h2>
+      <div class="flex items-center justify-between flex-wrap gap-3 mb-2">
+        <h2 class="text-lg font-bold">📋 登錄明細</h2>
+        <div class="flex gap-2">
+          <button type="button" id="expandAllYearsBtn" class="btn-ghost px-4 py-1.5 text-xs">⬇️ 全部展開</button>
+          <button type="button" id="collapseAllYearsBtn" class="btn-ghost px-4 py-1.5 text-xs">⬆️ 全部收合</button>
+        </div>
+      </div>
+      <p class="text-xs mb-4" style="color:var(--brown-soft)">明細依年度分組，預設只展開最新一年，點年度那一列可以展開／收合 🍃</p>
       <div class="overflow-x-auto rounded-2xl" style="border:1.5px solid var(--line);">
         <table class="data-table w-full text-sm text-left">
           <thead>
@@ -317,8 +330,8 @@
         <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
           <h2 class="text-lg font-bold">🏷️ 依計畫篩選分析</h2>
           <div class="flex gap-2">
-            <button type="button" class="btn-ghost px-4 py-1.5 text-xs" onclick="selectAllAnalysisPrograms()">✅ 全選</button>
-            <button type="button" class="btn-ghost px-4 py-1.5 text-xs" onclick="deselectAllAnalysisPrograms()">⬜ 全部取消</button>
+            <button type="button" id="selectAllProgramsBtn" class="btn-ghost px-4 py-1.5 text-xs">✅ 全選</button>
+            <button type="button" id="deselectAllProgramsBtn" class="btn-ghost px-4 py-1.5 text-xs">⬜ 全部取消</button>
           </div>
         </div>
         <p class="text-xs mb-3" style="color:var(--brown-soft)">點選下方計畫標籤，可以只看單一或多個計畫的分析數據 🍡</p>
@@ -363,7 +376,7 @@
       </div>
 
       <div class="cute-card p-6 sm:p-8">
-        <h2 class="text-lg font-bold mb-5">🍃 各季度加總比較（跨年度合計）</h2>
+        <h2 class="text-lg font-bold mb-5">🍃 各季度加總比較（跨年度合計，含全年度獎勵）</h2>
         <div id="quarterBars" class="space-y-4"></div>
       </div>
 
@@ -374,13 +387,13 @@
 </div>
 
 <!-- 公文線上預覽彈窗 -->
-<div id="previewOverlay" class="preview-overlay hidden no-print" onclick="if(event.target===this) closePreview()">
+<div id="previewOverlay" class="preview-overlay hidden no-print">
   <div class="preview-box">
     <div class="preview-box-header">
       <div class="font-bold" style="color:var(--caramel-dark);"><i class="fa-solid fa-eye mr-1"></i> <span id="previewFileName">檔案預覽</span></div>
       <div class="flex items-center gap-3">
         <a id="previewOpenNewTab" href="#" target="_blank" class="text-sm font-bold" style="color:var(--caramel-dark);"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>開新分頁</a>
-        <button type="button" onclick="closePreview()" class="text-xl" style="color:var(--pink-dark);">✕</button>
+        <button type="button" id="previewCloseBtn" class="text-xl" style="color:var(--pink-dark);">✕</button>
       </div>
     </div>
     <iframe id="previewFrame" src="" title="檔案預覽"></iframe>
@@ -388,39 +401,113 @@
 </div>
 
 <script>
-/* ============ 設定：請換成你自己部署的 Apps Script /exec 網址 ============ */
+/* ============================================================================
+   設定常數
+   ============================================================================ */
 const GAS_URL = "https://script.google.com/macros/s/AKfycbykh0r_2E43j4XXYQnu1rvC4NCd-Lypp08UBLgADMe1O2zHESy-c7uICB8EEiEkmXSz9Q/exec";
+const YEAR_MIN = 90;
+const YEAR_MAX = 150;
+const LIST_PAGE_SIZE = 15; // 分頁：每個年度分組預設顯示筆數，避免明細一次全部塞進 DOM
 
-let allRecords = [];
-let editingId = null;
-let selectedIds = new Set();
-let currentEditFiles = [];
-let filesToRemove = new Set();
-let selectedPrograms = new Set();
-let knownPrograms = new Set();
+/* ============================================================================
+   全域狀態（集中在一個物件，方便追蹤目前畫面狀態）
+   ============================================================================ */
+const state = {
+  allRecords: [],
+  editingId: null,
+  selectedIds: new Set(),      // 自訂加總勾選的紀錄 id
+  currentEditFiles: [],        // 編輯中紀錄目前的檔案清單
+  filesToRemove: new Set(),    // 編輯中標記要移除的檔案 url
+  selectedPrograms: new Set(), // 總覽分析目前勾選的計畫
+  knownPrograms: new Set(),
+  expandedYears: new Set(),    // 明細列表目前展開的年度
+  knownListYears: new Set(),
+  yearGroupsInitialized: false,
+  visibleCounts: {}            // { 年度: 目前顯示筆數 }，分頁用
+};
 
-document.addEventListener("DOMContentLoaded", () => {
-  if (GAS_URL.indexOf("TODO_") === 0) {
-    document.getElementById("setupHint").classList.remove("hidden");
-  }
+/* ============================================================================
+   DOM 小工具
+   ============================================================================ */
+const $ = (id) => document.getElementById(id);
+
+/* ============================================================================
+   初始化 / 事件綁定
+   ============================================================================ */
+document.addEventListener("DOMContentLoaded", init);
+
+function init() {
+  if (GAS_URL.indexOf("TODO_") === 0) $("setupHint").classList.remove("hidden");
+  bindStaticEvents();
+  bindDelegatedEvents();
   loadList();
-  document.getElementById("recordForm").addEventListener("submit", onSubmit);
-  document.getElementById("cancelEditBtn").addEventListener("click", resetForm);
-  document.getElementById("yearFilter").addEventListener("change", renderAll);
-  document.getElementById("clearSelBtn").addEventListener("click", () => { selectedIds.clear(); renderListTable(); renderSelectionSummary(); });
-  document.getElementById("programSelect").addEventListener("change", () => {
-    if (document.getElementById("programSelect").value) {
-      document.getElementById("programCustom").value = "";
-    }
-  });
-  document.getElementById("downloadPdfBtn").addEventListener("click", downloadAnalysisPdf);
-});
+}
 
+function bindStaticEvents() {
+  $("recordForm").addEventListener("submit", onSubmit);
+  $("cancelEditBtn").addEventListener("click", resetForm);
+  $("yearFilter").addEventListener("change", renderAll);
+  $("clearSelBtn").addEventListener("click", () => {
+    state.selectedIds.clear();
+    renderListTable();
+    renderSelectionSummary();
+  });
+  $("programSelect").addEventListener("change", () => {
+    if ($("programSelect").value) $("programCustom").value = "";
+  });
+  $("downloadPdfBtn").addEventListener("click", downloadAnalysisPdf);
+  $("tabEntryBtn").addEventListener("click", () => switchTab("entry"));
+  $("tabAnalysisBtn").addEventListener("click", () => switchTab("analysis"));
+  $("selectAllProgramsBtn").addEventListener("click", selectAllAnalysisPrograms);
+  $("deselectAllProgramsBtn").addEventListener("click", deselectAllAnalysisPrograms);
+  $("expandAllYearsBtn").addEventListener("click", expandAllYears);
+  $("collapseAllYearsBtn").addEventListener("click", collapseAllYears);
+  $("previewCloseBtn").addEventListener("click", closePreview);
+  $("previewOverlay").addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) closePreview();
+  });
+}
+
+/* 統一用事件委派處理所有動態產生內容的點擊／勾選，
+   不再對每個列表項目個別綁定監聽器，也不用把資料塞進 onclick="" 字串裡 */
+function bindDelegatedEvents() {
+  document.body.addEventListener("click", handleDelegatedClick);
+  document.body.addEventListener("change", handleDelegatedChange);
+}
+
+function handleDelegatedClick(e) {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  const action = el.dataset.action;
+
+  switch (action) {
+    case "edit": startEdit(el.dataset.id); break;
+    case "delete": deleteRecord(el.dataset.id); break;
+    case "preview": openPreview(el.dataset.url, el.dataset.name); break;
+    case "toggle-year": toggleYearGroup(Number(el.dataset.year)); break;
+    case "show-more": showMoreInYear(Number(el.dataset.year)); break;
+    case "toggle-select-chip": toggleSelect(el.dataset.id); break;
+    case "toggle-remove-file": toggleRemoveExistingFile(el.dataset.url); break;
+    case "toggle-program": toggleAnalysisProgram(el.dataset.program); break;
+  }
+}
+
+function handleDelegatedChange(e) {
+  if (e.target.matches(".rowCheck")) {
+    const id = e.target.dataset.id;
+    if (e.target.checked) state.selectedIds.add(id); else state.selectedIds.delete(id);
+    renderSelectionSummary();
+  }
+}
+
+/* ============================================================================
+   分頁切換 / 預覽彈窗
+   ============================================================================ */
 function switchTab(tab) {
-  const entry = document.getElementById("tabEntry");
-  const analysis = document.getElementById("tabAnalysis");
-  const entryBtn = document.getElementById("tabEntryBtn");
-  const analysisBtn = document.getElementById("tabAnalysisBtn");
+  const entry = $("tabEntry");
+  const analysis = $("tabAnalysis");
+  const entryBtn = $("tabEntryBtn");
+  const analysisBtn = $("tabAnalysisBtn");
   if (tab === "entry") {
     entry.classList.remove("hidden"); analysis.classList.add("hidden");
     entryBtn.classList.add("active"); analysisBtn.classList.remove("active");
@@ -434,12 +521,12 @@ function switchTab(tab) {
 function downloadAnalysisPdf() {
   // 先切到分析分頁確保內容有渲染，再叫出瀏覽器列印，於列印視窗選「另存為 PDF」即可下載
   switchTab("analysis");
-  const yf = document.getElementById("yearFilter").value;
+  const yf = $("yearFilter").value;
   const yearText = yf ? (yf + " 年度") : "全部年度";
-  const allProgramsSelected = selectedPrograms.size === knownPrograms.size;
-  const programText = allProgramsSelected ? "全部計畫" : (selectedPrograms.size ? ("計畫：" + [...selectedPrograms].join("、")) : "未選擇任何計畫");
-  document.getElementById("printTimestamp").textContent = new Date().toLocaleString("zh-TW", { hour12: false });
-  document.getElementById("printScope").textContent = yearText + "｜" + programText;
+  const allProgramsSelected = state.selectedPrograms.size === state.knownPrograms.size;
+  const programText = allProgramsSelected ? "全部計畫" : (state.selectedPrograms.size ? ("計畫：" + [...state.selectedPrograms].join("、")) : "未選擇任何計畫");
+  $("printTimestamp").textContent = new Date().toLocaleString("zh-TW", { hour12: false });
+  $("printScope").textContent = yearText + "｜" + programText;
   setTimeout(() => window.print(), 150);
 }
 
@@ -447,17 +534,20 @@ function openPreview(url, fileName) {
   const match = url.match(/\/d\/([^/]+)/) || url.match(/[?&]id=([^&]+)/);
   const fileId = match ? match[1] : null;
   const previewSrc = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : url;
-  document.getElementById("previewFrame").src = previewSrc;
-  document.getElementById("previewOpenNewTab").href = url;
-  document.getElementById("previewFileName").textContent = fileName || "檔案預覽";
-  document.getElementById("previewOverlay").classList.remove("hidden");
+  $("previewFrame").src = previewSrc;
+  $("previewOpenNewTab").href = url;
+  $("previewFileName").textContent = fileName || "檔案預覽";
+  $("previewOverlay").classList.remove("hidden");
 }
 
 function closePreview() {
-  document.getElementById("previewOverlay").classList.add("hidden");
-  document.getElementById("previewFrame").src = "";
+  $("previewOverlay").classList.add("hidden");
+  $("previewFrame").src = "";
 }
 
+/* ============================================================================
+   API 存取層（JSONP 讀取／POST 寫入）
+   ============================================================================ */
 function jsonpRequest(params) {
   return new Promise((resolve, reject) => {
     const cbName = "cb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
@@ -475,16 +565,88 @@ function jsonpRequest(params) {
   });
 }
 
-function loadList() {
-  jsonpRequest({ action: "list" }).then((res) => {
-    allRecords = (res && res.records) ? res.records : [];
-    renderAll();
-  }).catch((err) => {
-    console.error(err);
-    document.getElementById("pivotHead").innerHTML = '<tr><th style="color:#C1685A;">資料載入失敗，請確認 GAS_URL 是否已設定並已部署</th></tr>';
+// POST 寫入；因 GAS 302 轉址常讀不到回應，失敗時改用 JSONP 依 id 查詢確認是否真的寫入成功
+function postToGas(payload) {
+  return fetch(GAS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload)
+  }).then(res => res.json()).then(data => {
+    if (data.result === "success") return data;
+    throw new Error(data.message || "寫入失敗");
+  }).catch(() => {
+    if (payload.action === "delete") {
+      return { result: "success" };
+    }
+    return jsonpRequest({ action: "find", id: payload.id }).then(r => {
+      if (r.result === "found") return { result: "success" };
+      throw new Error("寫入狀態不明，請重新整理頁面確認是否已新增/更新成功");
+    });
   });
 }
 
+function loadList() {
+  jsonpRequest({ action: "list" }).then((res) => {
+    state.allRecords = (res && res.records) ? res.records : [];
+    renderAll();
+  }).catch((err) => {
+    console.error(err);
+    $("pivotHead").innerHTML = '<tr><th style="color:#C1685A;">資料載入失敗，請確認 GAS_URL 是否已設定並已部署</th></tr>';
+  });
+}
+
+/* ============================================================================
+   資料篩選
+   ============================================================================ */
+function getFilteredRecords() {
+  const yf = $("yearFilter").value;
+  return yf ? state.allRecords.filter(r => String(r.year) === yf) : state.allRecords;
+}
+
+function getAnalysisRecords() {
+  return getFilteredRecords().filter(r => state.selectedPrograms.has(r.program));
+}
+
+/* ============================================================================
+   輸入驗證（防呆：年度範圍、必填、金額需為正數）
+   ============================================================================ */
+function validateRecordInput({ year, quarter, program, amount }) {
+  const errors = [];
+  const invalidFields = new Set();
+
+  const y = Number(year);
+  if (!year || !Number.isInteger(y) || y < YEAR_MIN || y > YEAR_MAX) {
+    errors.push(`年度請輸入 ${YEAR_MIN}–${YEAR_MAX} 之間的民國年整數（例如 115）`);
+    invalidFields.add("year");
+  }
+  if (!quarter) {
+    errors.push("請選擇季度／期別");
+    invalidFields.add("quarter");
+  }
+  if (!program) {
+    errors.push("請選擇或輸入補助計畫名稱");
+    invalidFields.add("programCustom");
+  }
+  const amt = Number(amount);
+  if (amount === "" || amount === undefined || isNaN(amt) || amt <= 0) {
+    errors.push("金額請輸入大於 0 的數字");
+    invalidFields.add("amount");
+  }
+  return { errors, invalidFields };
+}
+
+function markFieldError(id, isError) {
+  const el = $(id);
+  if (el) el.classList.toggle("field-error", isError);
+}
+
+function clearFieldErrors() {
+  ["year", "quarter", "amount"].forEach(id => markFieldError(id, false));
+}
+
+/* ============================================================================
+   渲染：整體重繪入口
+   ============================================================================ */
 function renderAll() {
   populateYearFilter();
   populateProgramSelect();
@@ -492,82 +654,36 @@ function renderAll() {
   renderPivot();
   renderListTable();
   renderSelectionSummary();
-  if (!document.getElementById("tabAnalysis").classList.contains("hidden")) {
+  if (!$("tabAnalysis").classList.contains("hidden")) {
     renderAnalysis();
   }
 }
 
-function syncAnalysisPrograms() {
-  const programs = [...new Set(allRecords.map(r => r.program))].sort();
-  const isFirstLoad = knownPrograms.size === 0 && selectedPrograms.size === 0;
-  // 新出現的計畫（含第一次載入）預設打勾；已存在的維持使用者原本的選擇
-  programs.forEach(p => {
-    if (isFirstLoad || !knownPrograms.has(p)) selectedPrograms.add(p);
-  });
-  // 移除已經不存在的計畫
-  selectedPrograms.forEach(p => { if (!programs.includes(p)) selectedPrograms.delete(p); });
-  knownPrograms = new Set(programs);
-  renderAnalysisProgramChips(programs);
-}
-
-function renderAnalysisProgramChips(programs) {
-  const box = document.getElementById("analysisProgramChips");
-  if (!programs.length) {
-    box.innerHTML = '<span class="text-xs" style="color:#B79E86;">尚無計畫資料 🍃</span>';
-    return;
-  }
-  box.innerHTML = programs.map(p => `
-    <button type="button" class="chip-toggle ${selectedPrograms.has(p) ? "on" : ""}" onclick="toggleAnalysisProgram('${p.replace(/'/g, "\\'")}')">
-      ${selectedPrograms.has(p) ? "✅" : "🏷️"} ${escapeHtml(p)}
-    </button>
-  `).join("");
-}
-
-function toggleAnalysisProgram(p) {
-  if (selectedPrograms.has(p)) selectedPrograms.delete(p); else selectedPrograms.add(p);
-  renderAnalysisProgramChips([...knownPrograms].sort());
-  renderAnalysis();
-}
-
-function selectAllAnalysisPrograms() {
-  selectedPrograms = new Set(knownPrograms);
-  renderAnalysisProgramChips([...knownPrograms].sort());
-  renderAnalysis();
-}
-
-function deselectAllAnalysisPrograms() {
-  selectedPrograms = new Set();
-  renderAnalysisProgramChips([...knownPrograms].sort());
-  renderAnalysis();
-}
-
 function populateYearFilter() {
-  const sel = document.getElementById("yearFilter");
+  const sel = $("yearFilter");
   const current = sel.value;
-  const years = [...new Set(allRecords.map(r => String(r.year)))].sort((a, b) => b - a);
+  const years = [...new Set(state.allRecords.map(r => String(r.year)))].sort((a, b) => b - a);
   sel.innerHTML = '<option value="">全部年度</option>' + years.map(y => `<option value="${y}">${y} 年度</option>`).join("");
   sel.value = current && years.includes(current) ? current : "";
 }
 
 function populateProgramSelect() {
-  const sel = document.getElementById("programSelect");
+  const sel = $("programSelect");
   const current = sel.value;
-  const programs = [...new Set(allRecords.map(r => r.program))].sort();
+  const programs = [...new Set(state.allRecords.map(r => r.program))].sort();
   sel.innerHTML = '<option value="">請選擇既有計畫，或於右側輸入新計畫</option>' +
     programs.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
   sel.value = current && programs.includes(current) ? current : "";
 }
 
-function getFilteredRecords() {
-  const yf = document.getElementById("yearFilter").value;
-  return yf ? allRecords.filter(r => String(r.year) === yf) : allRecords;
-}
-
+/* ============================================================================
+   渲染：季度統計總覽（樞紐表）
+   ============================================================================ */
 function renderPivot() {
   const records = getFilteredRecords();
   const programs = [...new Set(records.map(r => r.program))].sort();
-  const head = document.getElementById("pivotHead");
-  const body = document.getElementById("pivotBody");
+  const head = $("pivotHead");
+  const body = $("pivotBody");
 
   if (records.length === 0) {
     head.innerHTML = '<tr><th style="font-weight:400; color:#B79E86;">目前尚無資料 🍃</th></tr>';
@@ -602,7 +718,7 @@ function renderPivot() {
     }).join("");
     grandTotal += rowTotal;
     return `<tr>
-        <td>${g.year}</td><td>第 ${g.quarter} 季 🍃</td>${cells}
+        <td>${g.year}</td><td>${quarterLabel(g.quarter)} 🍃</td>${cells}
         <td class="text-right font-bold" style="color:var(--caramel-dark);">${fmtMoney(rowTotal)}</td>
       </tr>`;
   }).join("") + `
@@ -613,71 +729,180 @@ function renderPivot() {
     </tr>`;
 }
 
+/* ============================================================================
+   渲染：登錄明細（依年度分組收合＋分頁顯示，避免清單越拉越長）
+   ============================================================================ */
+function buildRecordRow(r) {
+  const filesHtml = (r.files && r.files.length)
+    ? r.files.map(f => `
+        <div class="mb-1">
+          <button type="button" data-action="preview" data-url="${escapeHtml(f.url)}" data-name="${escapeHtml(f.name || "檔案")}" style="color:var(--caramel-dark); font-weight:700;" class="hover:underline">
+            <i class="fa-solid fa-eye mr-1"></i>${escapeHtml(f.name || "檔案")}
+          </button>
+          <a href="${escapeHtml(f.url)}" target="_blank" class="ml-1" style="color:#B79E86;" title="開新分頁 / 下載"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        </div>`).join("")
+    : '<span style="color:#C9B6A3;">—</span>';
+
+  return `
+    <tr>
+      <td><input type="checkbox" class="rowCheck" data-id="${escapeHtml(r.id)}" ${state.selectedIds.has(r.id) ? "checked" : ""} style="width:18px;height:18px;accent-color:var(--caramel-dark);"></td>
+      <td>${r.year}</td>
+      <td>${quarterLabel(r.quarter)}</td>
+      <td>${escapeHtml(r.program)}</td>
+      <td class="text-right">${fmtMoney(Number(r.amount))}</td>
+      <td style="color:var(--brown-soft);">${escapeHtml(r.note || "")}</td>
+      <td>${filesHtml}</td>
+      <td class="text-xs" style="color:#9C8468;">${escapeHtml(r.createdAt || "")}</td>
+      <td class="whitespace-nowrap">
+        <button type="button" data-action="edit" data-id="${escapeHtml(r.id)}" style="color:var(--caramel-dark);" class="hover:opacity-70 mr-3">✏️</button>
+        <button type="button" data-action="delete" data-id="${escapeHtml(r.id)}" style="color:var(--pink-dark);" class="hover:opacity-70">🗑️</button>
+      </td>
+    </tr>`;
+}
+
 function renderListTable() {
   const records = getFilteredRecords().slice().sort((a, b) => (b.year - a.year) || (b.quarter - a.quarter) || (b.createdAt || "").localeCompare(a.createdAt || ""));
-  const body = document.getElementById("listBody");
+  const body = $("listBody");
   if (records.length === 0) {
     body.innerHTML = '<tr><td colspan="9" class="text-center py-6" style="color:#B79E86;">尚無登錄紀錄 🍃</td></tr>';
     return;
   }
-  body.innerHTML = records.map(r => `
-    <tr>
-      <td><input type="checkbox" class="rowCheck" data-id="${r.id}" ${selectedIds.has(r.id) ? "checked" : ""} style="width:18px;height:18px;accent-color:var(--caramel-dark);"></td>
-      <td>${r.year}</td>
-      <td>第 ${r.quarter} 季</td>
-      <td>${escapeHtml(r.program)}</td>
-      <td class="text-right">${fmtMoney(Number(r.amount))}</td>
-      <td style="color:var(--brown-soft);">${escapeHtml(r.note || "")}</td>
-      <td>${(r.files && r.files.length) ? r.files.map(f => `
-        <div class="mb-1">
-          <button type="button" onclick="openPreview('${f.url.replace(/'/g, "\\'")}', '${(f.name || "檔案").replace(/'/g, "\\'")}')" style="color:var(--caramel-dark); font-weight:700;" class="hover:underline">
-            <i class="fa-solid fa-eye mr-1"></i>${escapeHtml(f.name || "檔案")}
-          </button>
-          <a href="${f.url}" target="_blank" class="ml-1" style="color:#B79E86;" title="開新分頁 / 下載"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-        </div>`).join("") : '<span style="color:#C9B6A3;">—</span>'}</td>
-      <td class="text-xs" style="color:#9C8468;">${escapeHtml(r.createdAt || "")}</td>
-      <td class="whitespace-nowrap">
-        <button onclick="startEdit('${r.id}')" style="color:var(--caramel-dark);" class="hover:opacity-70 mr-3">✏️</button>
-        <button onclick="deleteRecord('${r.id}')" style="color:var(--pink-dark);" class="hover:opacity-70">🗑️</button>
-      </td>
-    </tr>
-  `).join("");
 
-  document.querySelectorAll(".rowCheck").forEach(cb => {
-    cb.addEventListener("change", (e) => {
-      const id = e.target.getAttribute("data-id");
-      if (e.target.checked) selectedIds.add(id); else selectedIds.delete(id);
-      renderSelectionSummary();
-    });
+  const grouped = {};
+  records.forEach(r => { (grouped[r.year] = grouped[r.year] || []).push(r); });
+  const years = Object.keys(grouped).map(Number).sort((a, b) => b - a);
+
+  years.forEach(y => {
+    if (!state.knownListYears.has(y)) state.expandedYears.add(y);
+    if (state.visibleCounts[y] === undefined) state.visibleCounts[y] = LIST_PAGE_SIZE;
   });
+  state.knownListYears = new Set(years);
+  if (!state.yearGroupsInitialized && years.length) {
+    state.expandedYears = new Set([years[0]]);
+    state.yearGroupsInitialized = true;
+  }
+
+  body.innerHTML = years.map(y => {
+    const rows = grouped[y];
+    const yearTotal = rows.reduce((s, r) => s + Number(r.amount), 0);
+    const isOpen = state.expandedYears.has(y);
+    const header = `
+      <tr data-action="toggle-year" data-year="${y}" style="cursor:pointer; background:#FDF4E9;">
+        <td colspan="9" class="font-bold" style="color:var(--caramel-dark);">
+          <i class="fa-solid ${isOpen ? "fa-chevron-down" : "fa-chevron-right"} mr-2"></i>📅 ${y} 年度　<span style="color:var(--brown-soft); font-weight:600;">（${rows.length} 筆・小計 ${fmtMoney(yearTotal)}）</span>
+        </td>
+      </tr>`;
+
+    if (!isOpen) return header;
+
+    // 分頁：每個年度分組預設只顯示前 LIST_PAGE_SIZE 筆，超過的用「顯示更多」逐步展開
+    const visibleCount = Math.min(state.visibleCounts[y] || LIST_PAGE_SIZE, rows.length);
+    const visibleRows = rows.slice(0, visibleCount).map(buildRecordRow).join("");
+    const remaining = rows.length - visibleCount;
+    const moreRow = remaining > 0 ? `
+      <tr>
+        <td colspan="9" class="text-center py-2">
+          <button type="button" data-action="show-more" data-year="${y}" class="btn-ghost px-4 py-1.5 text-xs">⬇️ 顯示更多（還有 ${remaining} 筆）</button>
+        </td>
+      </tr>` : "";
+
+    return header + visibleRows + moreRow;
+  }).join("");
 }
 
+function toggleYearGroup(y) {
+  if (state.expandedYears.has(y)) state.expandedYears.delete(y); else state.expandedYears.add(y);
+  renderListTable();
+}
+
+function showMoreInYear(y) {
+  state.visibleCounts[y] = (state.visibleCounts[y] || LIST_PAGE_SIZE) + LIST_PAGE_SIZE;
+  renderListTable();
+}
+
+function expandAllYears() {
+  state.expandedYears = new Set(state.knownListYears);
+  state.yearGroupsInitialized = true;
+  renderListTable();
+}
+
+function collapseAllYears() {
+  state.expandedYears = new Set();
+  state.yearGroupsInitialized = true;
+  renderListTable();
+}
+
+/* ============================================================================
+   渲染：自訂加總小幫手
+   ============================================================================ */
 function renderSelectionSummary() {
-  const chipsEl = document.getElementById("selectedChips");
-  const selected = allRecords.filter(r => selectedIds.has(r.id));
+  const chipsEl = $("selectedChips");
+  const selected = state.allRecords.filter(r => state.selectedIds.has(r.id));
   if (selected.length === 0) {
     chipsEl.innerHTML = '<span class="text-xs" style="color:#B79E86;">目前尚未勾選任何項目</span>';
   } else {
     chipsEl.innerHTML = selected.map(r => `
-      <span class="chip">🍬 ${r.year}年 第${r.quarter}季・${escapeHtml(r.program)}：${fmtMoney(Number(r.amount))}
-        <button onclick="toggleSelect('${r.id}')" title="移除"><i class="fa-solid fa-circle-xmark"></i></button>
+      <span class="chip">🍬 ${r.year}年 ${quarterLabel(r.quarter)}・${escapeHtml(r.program)}：${fmtMoney(Number(r.amount))}
+        <button type="button" data-action="toggle-select-chip" data-id="${escapeHtml(r.id)}" title="移除"><i class="fa-solid fa-circle-xmark"></i></button>
       </span>
     `).join("");
   }
   const total = selected.reduce((sum, r) => sum + Number(r.amount), 0);
-  document.getElementById("selCount").textContent = selected.length;
-  document.getElementById("selTotal").textContent = fmtMoney(total);
+  $("selCount").textContent = selected.length;
+  $("selTotal").textContent = fmtMoney(total);
 }
 
 function toggleSelect(id) {
-  if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  if (state.selectedIds.has(id)) state.selectedIds.delete(id); else state.selectedIds.add(id);
   renderListTable();
   renderSelectionSummary();
 }
 
-/* ============ 總覽分析 ============ */
-function getAnalysisRecords() {
-  return getFilteredRecords().filter(r => selectedPrograms.has(r.program));
+/* ============================================================================
+   渲染：總覽分析
+   ============================================================================ */
+function syncAnalysisPrograms() {
+  const programs = [...new Set(state.allRecords.map(r => r.program))].sort();
+  const isFirstLoad = state.knownPrograms.size === 0 && state.selectedPrograms.size === 0;
+  // 新出現的計畫（含第一次載入）預設打勾；已存在的維持使用者原本的選擇
+  programs.forEach(p => {
+    if (isFirstLoad || !state.knownPrograms.has(p)) state.selectedPrograms.add(p);
+  });
+  // 移除已經不存在的計畫
+  state.selectedPrograms.forEach(p => { if (!programs.includes(p)) state.selectedPrograms.delete(p); });
+  state.knownPrograms = new Set(programs);
+  renderAnalysisProgramChips(programs);
+}
+
+function renderAnalysisProgramChips(programs) {
+  const box = $("analysisProgramChips");
+  if (!programs.length) {
+    box.innerHTML = '<span class="text-xs" style="color:#B79E86;">尚無計畫資料 🍃</span>';
+    return;
+  }
+  box.innerHTML = programs.map(p => `
+    <button type="button" class="chip-toggle ${state.selectedPrograms.has(p) ? "on" : ""}" data-action="toggle-program" data-program="${escapeHtml(p)}">
+      ${state.selectedPrograms.has(p) ? "✅" : "🏷️"} ${escapeHtml(p)}
+    </button>
+  `).join("");
+}
+
+function toggleAnalysisProgram(p) {
+  if (state.selectedPrograms.has(p)) state.selectedPrograms.delete(p); else state.selectedPrograms.add(p);
+  renderAnalysisProgramChips([...state.knownPrograms].sort());
+  renderAnalysis();
+}
+
+function selectAllAnalysisPrograms() {
+  state.selectedPrograms = new Set(state.knownPrograms);
+  renderAnalysisProgramChips([...state.knownPrograms].sort());
+  renderAnalysis();
+}
+
+function deselectAllAnalysisPrograms() {
+  state.selectedPrograms = new Set();
+  renderAnalysisProgramChips([...state.knownPrograms].sort());
+  renderAnalysis();
 }
 
 function renderAnalysis() {
@@ -688,17 +913,17 @@ function renderAnalysis() {
   const quarterKeys = new Set(records.map(r => r.year + "|" + r.quarter));
   const avgQuarter = quarterKeys.size ? total / quarterKeys.size : 0;
 
-  document.getElementById("sumTotal").textContent = fmtMoney(total);
-  document.getElementById("sumCount").textContent = records.length;
-  document.getElementById("sumPrograms").textContent = programs.length;
-  document.getElementById("sumAvgQuarter").textContent = fmtMoney(avgQuarter);
+  $("sumTotal").textContent = fmtMoney(total);
+  $("sumCount").textContent = records.length;
+  $("sumPrograms").textContent = programs.length;
+  $("sumAvgQuarter").textContent = fmtMoney(avgQuarter);
 
   // 各計畫佔比
   const byProgram = {};
   records.forEach(r => { byProgram[r.program] = (byProgram[r.program] || 0) + Number(r.amount); });
   const programEntries = Object.entries(byProgram).sort((a, b) => b[1] - a[1]);
   const maxProgram = programEntries.length ? programEntries[0][1] : 0;
-  document.getElementById("programBars").innerHTML = programEntries.length ? programEntries.map(([name, amt]) => {
+  $("programBars").innerHTML = programEntries.length ? programEntries.map(([name, amt]) => {
     const pct = total ? (amt / total * 100) : 0;
     const width = maxProgram ? (amt / maxProgram * 100) : 0;
     return `
@@ -716,7 +941,7 @@ function renderAnalysis() {
   records.forEach(r => { byYear[r.year] = (byYear[r.year] || 0) + Number(r.amount); });
   const yearEntries = Object.entries(byYear).sort((a, b) => a[0] - b[0]);
   const maxYear = yearEntries.length ? Math.max(...yearEntries.map(e => e[1])) : 0;
-  document.getElementById("yearBars").innerHTML = yearEntries.length ? yearEntries.map(([yr, amt]) => {
+  $("yearBars").innerHTML = yearEntries.length ? yearEntries.map(([yr, amt]) => {
     const width = maxYear ? (amt / maxYear * 100) : 0;
     return `
       <div>
@@ -728,17 +953,17 @@ function renderAnalysis() {
       </div>`;
   }).join("") : '<p class="text-sm" style="color:#B79E86;">目前尚無資料 🍃</p>';
 
-  // 各季度加總比較（跨年度）
-  const byQuarter = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  // 各季度加總比較（跨年度，含全年度獎勵）
+  const byQuarter = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   records.forEach(r => { byQuarter[r.quarter] = (byQuarter[r.quarter] || 0) + Number(r.amount); });
   const maxQuarter = Math.max(...Object.values(byQuarter));
-  document.getElementById("quarterBars").innerHTML = [1, 2, 3, 4].map(q => {
+  $("quarterBars").innerHTML = [1, 2, 3, 4, 5].map(q => {
     const amt = byQuarter[q] || 0;
     const width = maxQuarter ? (amt / maxQuarter * 100) : 0;
     return `
       <div>
         <div class="flex justify-between text-sm mb-1">
-          <span class="font-bold" style="color:var(--brown-text);">🍃 第 ${q} 季</span>
+          <span class="font-bold" style="color:var(--brown-text);">${q === 5 ? "" : "🍃 "}${quarterLabel(q)}</span>
           <span style="color:var(--caramel-dark); font-weight:700;">${fmtMoney(amt)}</span>
         </div>
         <div class="bar-track"><div class="bar-fill" style="width:${width}%;"></div></div>
@@ -746,20 +971,22 @@ function renderAnalysis() {
   }).join("");
 }
 
+/* ============================================================================
+   新增／編輯表單
+   ============================================================================ */
 function renderExistingFilesEditor() {
-  const box = document.getElementById("existingFilesBox");
-  const visibleFiles = currentEditFiles.filter(f => !filesToRemove.has(f.url));
-  if (currentEditFiles.length === 0) {
+  const box = $("existingFilesBox");
+  if (state.currentEditFiles.length === 0) {
     box.classList.add("hidden");
     box.innerHTML = "";
     return;
   }
   box.classList.remove("hidden");
-  box.innerHTML = currentEditFiles.map(f => {
-    const removed = filesToRemove.has(f.url);
+  box.innerHTML = state.currentEditFiles.map(f => {
+    const removed = state.filesToRemove.has(f.url);
     return `<span class="chip" style="${removed ? "opacity:.45; text-decoration:line-through;" : ""}">
-        📎 <button type="button" onclick="openPreview('${f.url.replace(/'/g, "\\'")}', '${f.name.replace(/'/g, "\\'")}')" style="color:var(--caramel-dark);" class="hover:underline">${escapeHtml(f.name)}</button>
-        <button type="button" onclick="toggleRemoveExistingFile('${f.url.replace(/'/g, "\\'")}')" title="${removed ? "取消移除" : "移除此檔案"}">
+        📎 <button type="button" data-action="preview" data-url="${escapeHtml(f.url)}" data-name="${escapeHtml(f.name)}" style="color:var(--caramel-dark);" class="hover:underline">${escapeHtml(f.name)}</button>
+        <button type="button" data-action="toggle-remove-file" data-url="${escapeHtml(f.url)}" title="${removed ? "取消移除" : "移除此檔案"}">
           <i class="fa-solid ${removed ? "fa-rotate-left" : "fa-circle-xmark"}"></i>
         </button>
       </span>`;
@@ -767,51 +994,53 @@ function renderExistingFilesEditor() {
 }
 
 function toggleRemoveExistingFile(url) {
-  if (filesToRemove.has(url)) filesToRemove.delete(url); else filesToRemove.add(url);
+  if (state.filesToRemove.has(url)) state.filesToRemove.delete(url); else state.filesToRemove.add(url);
   renderExistingFilesEditor();
 }
 
 function startEdit(id) {
-  const r = allRecords.find(x => x.id === id);
+  const r = state.allRecords.find(x => x.id === id);
   if (!r) return;
-  editingId = id;
-  document.getElementById("recordId").value = id;
-  document.getElementById("year").value = r.year;
-  document.getElementById("quarter").value = r.quarter;
-  document.getElementById("programSelect").value = r.program;
-  document.getElementById("programCustom").value = "";
-  document.getElementById("note").value = r.note || "";
-  document.getElementById("fileInput").value = "";
-  currentEditFiles = (r.files || []).slice();
-  filesToRemove = new Set();
+  state.editingId = id;
+  $("recordId").value = id;
+  $("year").value = r.year;
+  $("quarter").value = r.quarter;
+  $("programSelect").value = r.program;
+  $("programCustom").value = "";
+  $("note").value = r.note || "";
+  $("fileInput").value = "";
+  state.currentEditFiles = (r.files || []).slice();
+  state.filesToRemove = new Set();
   renderExistingFilesEditor();
-  document.getElementById("amount").value = r.amount;
-  document.getElementById("formTitle").textContent = "編輯補助紀錄";
-  document.getElementById("submitBtnText").textContent = "儲 存 修 改";
-  document.getElementById("cancelEditBtn").classList.remove("hidden");
+  $("amount").value = r.amount;
+  $("formTitle").textContent = "編輯補助紀錄";
+  $("submitBtnText").textContent = "儲 存 修 改";
+  $("cancelEditBtn").classList.remove("hidden");
+  clearFieldErrors();
   switchTab("entry");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function resetForm() {
-  editingId = null;
-  currentEditFiles = [];
-  filesToRemove = new Set();
-  document.getElementById("recordForm").reset();
-  document.getElementById("recordId").value = "";
-  document.getElementById("existingFilesBox").classList.add("hidden");
-  document.getElementById("existingFilesBox").innerHTML = "";
-  document.getElementById("formTitle").textContent = "新增補助紀錄";
-  document.getElementById("submitBtnText").textContent = "新 增 紀 錄";
-  document.getElementById("cancelEditBtn").classList.add("hidden");
-  document.getElementById("formMsg").textContent = "";
+  state.editingId = null;
+  state.currentEditFiles = [];
+  state.filesToRemove = new Set();
+  $("recordForm").reset();
+  $("recordId").value = "";
+  $("existingFilesBox").classList.add("hidden");
+  $("existingFilesBox").innerHTML = "";
+  $("formTitle").textContent = "新增補助紀錄";
+  $("submitBtnText").textContent = "新 增 紀 錄";
+  $("cancelEditBtn").classList.add("hidden");
+  $("formMsg").textContent = "";
+  clearFieldErrors();
 }
 
 function deleteRecord(id) {
   if (!confirm("確定要刪除這筆紀錄嗎？此動作無法復原。")) return;
   postToGas({ action: "delete", id }).then(() => {
-    allRecords = allRecords.filter(r => r.id !== id);
-    selectedIds.delete(id);
+    state.allRecords = state.allRecords.filter(r => r.id !== id);
+    state.selectedIds.delete(id);
     renderAll();
   }).catch(err => alert("刪除失敗：" + err.message));
 }
@@ -827,27 +1056,36 @@ function fileToBase64(file) {
 
 async function onSubmit(e) {
   e.preventDefault();
-  const msg = document.getElementById("formMsg");
-  const btn = document.getElementById("submitBtn");
-  const program = document.getElementById("programCustom").value.trim() || document.getElementById("programSelect").value;
+  const msg = $("formMsg");
+  const btn = $("submitBtn");
+  const program = $("programCustom").value.trim() || $("programSelect").value;
 
-  if (!program) {
-    msg.textContent = "請選擇或輸入補助計畫名稱。";
+  const yearVal = $("year").value;
+  const quarterVal = $("quarter").value;
+  const amountVal = $("amount").value;
+
+  const { errors, invalidFields } = validateRecordInput({ year: yearVal, quarter: quarterVal, program, amount: amountVal });
+  markFieldError("year", invalidFields.has("year"));
+  markFieldError("quarter", invalidFields.has("quarter"));
+  markFieldError("amount", invalidFields.has("amount"));
+
+  if (errors.length) {
+    msg.textContent = errors[0];
     msg.style.color = "#C1685A";
     return;
   }
 
   const payload = {
-    action: editingId ? "update" : "add",
-    id: editingId || ("id_" + Date.now() + "_" + Math.floor(Math.random() * 100000)),
-    year: document.getElementById("year").value,
-    quarter: document.getElementById("quarter").value,
+    action: state.editingId ? "update" : "add",
+    id: state.editingId || ("id_" + Date.now() + "_" + Math.floor(Math.random() * 100000)),
+    year: yearVal,
+    quarter: quarterVal,
     program: program,
-    amount: document.getElementById("amount").value,
-    note: document.getElementById("note").value
+    amount: amountVal,
+    note: $("note").value
   };
 
-  const fileInput = document.getElementById("fileInput");
+  const fileInput = $("fileInput");
   const selectedFiles = fileInput.files ? Array.from(fileInput.files) : [];
   const oversized = selectedFiles.find(f => f.size > 15 * 1024 * 1024);
   if (oversized) {
@@ -862,8 +1100,8 @@ async function onSubmit(e) {
       fileMime: file.type || "application/octet-stream"
     })));
   }
-  if (editingId && filesToRemove.size) {
-    payload.removeFileUrls = Array.from(filesToRemove);
+  if (state.editingId && state.filesToRemove.size) {
+    payload.removeFileUrls = Array.from(state.filesToRemove);
   }
 
   btn.disabled = true;
@@ -871,7 +1109,7 @@ async function onSubmit(e) {
   msg.style.color = "var(--brown-soft)";
 
   postToGas(payload).then(() => {
-    msg.textContent = editingId ? "已更新！🎀" : "新增成功！🎉";
+    msg.textContent = state.editingId ? "已更新！🎀" : "新增成功！🎉";
     msg.style.color = "#6E8F5C";
     resetForm();
     loadList();
@@ -881,29 +1119,17 @@ async function onSubmit(e) {
   }).finally(() => { btn.disabled = false; });
 }
 
-// POST 寫入；因 GAS 302 轉址常讀不到回應，失敗時改用 JSONP 依 id 查詢確認是否真的寫入成功
-function postToGas(payload) {
-  return fetch(GAS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(payload)
-  }).then(res => res.json()).then(data => {
-    if (data.result === "success") return data;
-    throw new Error(data.message || "寫入失敗");
-  }).catch(() => {
-    if (payload.action === "delete") {
-      return { result: "success" };
-    }
-    return jsonpRequest({ action: "find", id: payload.id }).then(r => {
-      if (r.result === "found") return { result: "success" };
-      throw new Error("寫入狀態不明，請重新整理頁面確認是否已新增/更新成功");
-    });
-  });
+/* ============================================================================
+   共用工具函式
+   ============================================================================ */
+function quarterLabel(q) {
+  return String(q) === "5" ? "🏆 全年度獎勵" : ("第 " + q + " 季");
 }
 
 function fmtMoney(n) {
   return "$" + Math.round(n).toLocaleString("zh-TW");
 }
+
 function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
