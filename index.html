@@ -120,10 +120,18 @@
     color: var(--brown-soft);
     font-weight: 700;
     border-bottom: 2px solid var(--line);
+    white-space: nowrap;
   }
   table.data-table td, table.data-table th { padding: 0.65rem 0.85rem; }
   table.data-table tr { border-bottom: 1px solid var(--line); }
   table.data-table tr:hover td { background: #FFF8EE; }
+  .wrap-cell {
+    white-space: normal;
+    word-break: break-word;
+    min-width: 110px;
+    max-width: 170px;
+    line-height: 1.4;
+  }
   .chip {
     display: inline-flex; align-items: center; gap: 4px;
     background: #FBEFE0; border: 1px solid var(--line); border-radius: 999px;
@@ -359,7 +367,7 @@
         <table class="data-table w-full text-sm text-left">
           <thead>
             <tr>
-              <th></th><th>年度</th><th>季度</th><th>計畫名稱</th><th class="text-right">金額</th><th class="text-right">評核分數</th><th class="text-right">訓練計劃數</th><th class="text-right">評核總點數</th><th>備註</th><th>公文檔案（可多個）</th><th>建立時間</th><th>操作</th>
+              <th></th><th>年度</th><th>季度</th><th>計畫名稱</th><th class="text-right">金額</th><th>備註</th><th>公文檔案（可多個）</th><th>建立時間</th><th>操作</th>
             </tr>
           </thead>
           <tbody id="listBody"></tbody>
@@ -895,6 +903,15 @@ function fmtOptionalNumber(v) {
   return (v === undefined || v === null || v === "") ? '<span style="color:#C9B6A3;">—</span>' : escapeHtml(String(v));
 }
 
+function formatCreatedAtHtml(ts) {
+  const text = ts || "";
+  const parts = text.split(" ");
+  if (parts.length === 2) {
+    return `${escapeHtml(parts[0])}<br>${escapeHtml(parts[1])}`;
+  }
+  return escapeHtml(text);
+}
+
 function buildRecordRow(r) {
   const filesHtml = (r.files && r.files.length)
     ? r.files.map(f => `
@@ -911,14 +928,11 @@ function buildRecordRow(r) {
       <td><input type="checkbox" class="rowCheck" data-id="${escapeHtml(r.id)}" ${state.selectedIds.has(r.id) ? "checked" : ""} style="width:18px;height:18px;accent-color:var(--caramel-dark);"></td>
       <td>${r.year}</td>
       <td>${quarterLabel(r.quarter)}</td>
-      <td>${escapeHtml(r.program)}</td>
+      <td class="wrap-cell" title="${escapeHtml(r.program)}">${escapeHtml(r.program)}</td>
       <td class="text-right">${fmtMoney(Number(r.amount))}</td>
-      <td class="text-right">${fmtOptionalNumber(r.evalScore)}</td>
-      <td class="text-right">${fmtOptionalNumber(r.trainingCount)}</td>
-      <td class="text-right">${fmtOptionalNumber(r.evalTotalPoints)}</td>
-      <td style="color:var(--brown-soft);">${escapeHtml(r.note || "")}</td>
+      <td class="wrap-cell" style="color:var(--brown-soft);">${escapeHtml(r.note || "")}</td>
       <td>${filesHtml}</td>
-      <td class="text-xs" style="color:#9C8468;">${escapeHtml(r.createdAt || "")}</td>
+      <td class="text-xs" style="color:#9C8468; white-space:nowrap;">${formatCreatedAtHtml(r.createdAt)}</td>
       <td class="whitespace-nowrap">
         <button type="button" data-action="edit" data-id="${escapeHtml(r.id)}" style="color:var(--caramel-dark);" class="hover:opacity-70 mr-3">✏️</button>
         <button type="button" data-action="delete" data-id="${escapeHtml(r.id)}" style="color:var(--pink-dark);" class="hover:opacity-70">🗑️</button>
@@ -930,7 +944,7 @@ function renderListTable() {
   const records = getFilteredRecords().slice().sort((a, b) => (b.year - a.year) || (b.quarter - a.quarter) || (b.createdAt || "").localeCompare(a.createdAt || ""));
   const body = $("listBody");
   if (records.length === 0) {
-    body.innerHTML = '<tr><td colspan="12" class="text-center py-6" style="color:#B79E86;">尚無登錄紀錄 🍃</td></tr>';
+    body.innerHTML = '<tr><td colspan="9" class="text-center py-6" style="color:#B79E86;">尚無登錄紀錄 🍃</td></tr>';
     return;
   }
 
@@ -954,7 +968,7 @@ function renderListTable() {
     const isOpen = state.expandedYears.has(y);
     const header = `
       <tr data-action="toggle-year" data-year="${y}" style="cursor:pointer; background:#FDF4E9;">
-        <td colspan="12" class="font-bold" style="color:var(--caramel-dark);">
+        <td colspan="9" class="font-bold" style="color:var(--caramel-dark);">
           <i class="fa-solid ${isOpen ? "fa-chevron-down" : "fa-chevron-right"} mr-2"></i>📅 ${y} 年度　<span style="color:var(--brown-soft); font-weight:600;">（${rows.length} 筆・小計 ${fmtMoney(yearTotal)}）</span>
         </td>
       </tr>`;
@@ -967,7 +981,7 @@ function renderListTable() {
     const remaining = rows.length - visibleCount;
     const moreRow = remaining > 0 ? `
       <tr>
-        <td colspan="12" class="text-center py-2">
+        <td colspan="9" class="text-center py-2">
           <button type="button" data-action="show-more" data-year="${y}" class="btn-ghost px-4 py-1.5 text-xs">⬇️ 顯示更多（還有 ${remaining} 筆）</button>
         </td>
       </tr>` : "";
@@ -1193,7 +1207,7 @@ function renderAnnualAwardAnalysis(analysisScopeRecords) {
   const rowsHtml = records.slice().sort((a, b) => b.year - a.year).map(r => `
     <tr>
       <td>${r.year} 年度</td>
-      <td>${escapeHtml(r.program)}</td>
+      <td class="wrap-cell" title="${escapeHtml(r.program)}">${escapeHtml(r.program)}</td>
       <td class="text-right font-bold" style="color:var(--caramel-dark);">${fmtMoney(Number(r.amount))}</td>
       <td class="text-right">${fmtOptionalNumber(r.evalScore)}</td>
       <td class="text-right">${fmtOptionalNumber(r.trainingCount)}</td>
