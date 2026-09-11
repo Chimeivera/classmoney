@@ -132,6 +132,15 @@
     max-width: 170px;
     line-height: 1.4;
   }
+  /* 「操作」欄固定在表格最右側，橫向捲動時也一定看得到編輯/刪除按鈕 */
+  .sticky-action-col {
+    position: sticky;
+    right: 0;
+    background: #FFFDF9;
+    box-shadow: -6px 0 8px -6px rgba(92,70,50,0.15);
+  }
+  table.data-table th.sticky-action-col { background: #FDF4E9; z-index: 2; }
+  table.data-table tr:hover td.sticky-action-col { background: #FFF8EE; }
   .chip {
     display: inline-flex; align-items: center; gap: 4px;
     background: #FBEFE0; border: 1px solid var(--line); border-radius: 999px;
@@ -367,7 +376,7 @@
         <table class="data-table w-full text-sm text-left">
           <thead>
             <tr>
-              <th></th><th>年度</th><th>季度</th><th>計畫名稱</th><th class="text-right">金額</th><th>備註</th><th>公文檔案（可多個）</th><th>建立時間</th><th>操作</th>
+              <th></th><th>年度</th><th>季度</th><th>計畫名稱</th><th class="text-right">金額</th><th>備註</th><th>公文檔案</th><th>建立時間</th><th class="sticky-action-col">操作</th>
             </tr>
           </thead>
           <tbody id="listBody"></tbody>
@@ -914,13 +923,12 @@ function formatCreatedAtHtml(ts) {
 
 function buildRecordRow(r) {
   const filesHtml = (r.files && r.files.length)
-    ? r.files.map(f => `
-        <div class="mb-1">
-          <button type="button" data-action="preview" data-url="${escapeHtml(f.url)}" data-name="${escapeHtml(f.name || "檔案")}" style="color:var(--caramel-dark); font-weight:700;" class="hover:underline">
-            <i class="fa-solid fa-eye mr-1"></i>${escapeHtml(f.name || "檔案")}
-          </button>
-          <a href="${escapeHtml(f.url)}" target="_blank" class="ml-1" style="color:#B79E86;" title="開新分頁 / 下載"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-        </div>`).join("")
+    ? `<div class="flex flex-wrap gap-1">` + r.files.map(f => `
+        <button type="button" data-action="preview" data-url="${escapeHtml(f.url)}" data-name="${escapeHtml(f.name || "檔案")}" title="${escapeHtml(f.name || "檔案")}"
+          class="inline-flex items-center justify-center hover:opacity-75"
+          style="width:30px;height:30px;border-radius:999px;background:#FBEFE0;border:1px solid var(--line);color:var(--caramel-dark);">
+          <i class="fa-solid fa-eye"></i>
+        </button>`).join("") + `</div>`
     : '<span style="color:#C9B6A3;">—</span>';
 
   return `
@@ -933,7 +941,7 @@ function buildRecordRow(r) {
       <td class="wrap-cell" style="color:var(--brown-soft);">${escapeHtml(r.note || "")}</td>
       <td>${filesHtml}</td>
       <td class="text-xs" style="color:#9C8468; white-space:nowrap;">${formatCreatedAtHtml(r.createdAt)}</td>
-      <td class="whitespace-nowrap">
+      <td class="whitespace-nowrap sticky-action-col">
         <button type="button" data-action="edit" data-id="${escapeHtml(r.id)}" style="color:var(--caramel-dark);" class="hover:opacity-70 mr-3">✏️</button>
         <button type="button" data-action="delete" data-id="${escapeHtml(r.id)}" style="color:var(--pink-dark);" class="hover:opacity-70">🗑️</button>
       </td>
